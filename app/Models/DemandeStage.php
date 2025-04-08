@@ -2,45 +2,59 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class DemandeStage extends Model
 {
+    use HasFactory;
+
     protected $fillable = [
         'stagiaire_id',
-        'nature_demande_id',
-        'type_demande_id',
         'structure_id',
-        'universite_id',
-        'date_debut',
-        'date_fin',
-        'motivation',
+        'nature_demande_id',
         'statut',
+        'date_soumission',
+        'structure_souhaitee',
     ];
 
+    protected $casts = [
+        'date_soumission' => 'date',
+    ];
+
+    /**
+     * Get the stagiaire that made the demande.
+     */
     public function stagiaire(): BelongsTo
     {
         return $this->belongsTo(Stagiaire::class);
     }
 
+    /**
+     * Get the structure for this demande.
+     */
+    public function structure(): BelongsTo
+    {
+        return $this->belongsTo(Structure::class);
+    }
+
+    /**
+     * Get the nature of this demande.
+     */
     public function natureDemande(): BelongsTo
     {
         return $this->belongsTo(NatureDemande::class);
     }
 
-    public function typeDemande(): BelongsTo
+    /**
+     * Get the stage created from this demande (if accepted).
+     */
+    public function stage(): HasOne
     {
-        return $this->belongsTo(typeDemande::class);
+        return $this->hasOne(Stage::class);
     }
 
-    public function structure(): BelongsTo
-    {
-        return $this->belongsTo(Structure::class);
-
-    }
-    public function universite(): BelongsTo
-    {
-        return $this->belongsTo(Agent::class, 'universite_id');
-    }
+    // Définir d'autres relations Eloquent ici ultérieurement
 }

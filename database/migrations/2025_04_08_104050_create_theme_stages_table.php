@@ -11,9 +11,12 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('nature_demandes', function (Blueprint $table) {
+        Schema::create('theme_stages', function (Blueprint $table) {
             $table->id();
-            $table->string('libelle'); // académique / professionnel
+            $table->string('intitule');
+            $table->enum('etat', ['Proposé', 'Modifié', 'Validé', 'Refusé'])->default('Proposé');
+            $table->text('description')->nullable();
+            $table->text('mots_cles')->nullable(); // Pour faciliter la recherche
             $table->timestamps();
         });
     }
@@ -23,6 +26,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('nature_demandes');
+        Schema::dropIfExists('theme_stages');
     }
 };

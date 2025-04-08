@@ -2,19 +2,25 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class NatureDemande extends Model
 {
-    // Autorise l’attribut 'libelle' à être rempli automatiquement
-    protected $fillable = ['libelle'];
+    use HasFactory;
+
+    protected $fillable = [
+        'libelle',
+    ];
 
     /**
-     * Une nature de demande peut être liée à plusieurs demandes.
+     * Get all the demande stages that have this nature.
      */
-    public function demandes(): HasMany
+    public function demandeStages(): HasMany
     {
-        return $this->hasMany(Demande::class);
+        return $this->hasMany(DemandeStage::class);
     }
+
+    // Définir d'autres relations Eloquent ici ultérieurement
 }

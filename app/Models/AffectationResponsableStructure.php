@@ -2,38 +2,44 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class AffectationResponsableStructure extends Model
 {
-    protected $table = 'affectation_responsable_structures';
+    use HasFactory;
+
+    protected $table = 'affectation_responsable_structures'; // Important si le nom de la table ne suit pas la convention Eloquent
 
     protected $fillable = [
-        'demande_stage_id',
-        'agent_id',
+        'structure_id',
+        'responsable_id',
         'date_affectation',
-        'valide',
-        'motif',
-        'modifie_par',
-        'termine',
+        'date_fin_affectation',
+        'poste',
+    ];
+
+    protected $casts = [
+        'date_affectation' => 'date',
+        'date_fin_affectation' => 'date',
     ];
 
     /**
-     * Relations
+     * Get the structure that this affectation belongs to.
      */
-
-    public function demandeStage()
+    public function structure(): BelongsTo
     {
-        return $this->belongsTo(DemandeStage::class);
+        return $this->belongsTo(Structure::class);
     }
 
-    public function agent()
+    /**
+     * Get the responsable (user) involved in this affectation.
+     */
+    public function responsable(): BelongsTo
     {
-        return $this->belongsTo(Agent::class);
+        return $this->belongsTo(User::class, 'responsable_id');
     }
 
-    public function modificateur()
-    {
-        return $this->belongsTo(Utilisateur::class, 'modifie_par');
-    }
+    // Définir d'autres relations Eloquent ici ultérieurement
 }

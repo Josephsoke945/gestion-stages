@@ -13,7 +13,14 @@ return new class extends Migration
     {
         Schema::create('affectation_responsable_structures', function (Blueprint $table) {
             $table->id();
+            $table->foreignId('structure_id')->constrained('structures')->onDelete('cascade');
+            $table->foreignId('responsable_id')->constrained('agents')->onDelete('cascade');
+            $table->date('date_affectation')->nullable();
+            $table->date('date_fin_affectation')->nullable();
+            $table->string('poste')->nullable();
             $table->timestamps();
+
+            $table->unique(['structure_id', 'responsable_id', 'date_affectation'], 'unique_resp_struct_affectation'); // Utilisation de date_affectation
         });
     }
 
@@ -21,7 +28,7 @@ return new class extends Migration
      * Reverse the migrations.
      */
     public function down(): void
-    {
+     {
         Schema::dropIfExists('affectation_responsable_structures');
     }
 };

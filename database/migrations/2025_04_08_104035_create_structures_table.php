@@ -11,8 +11,11 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('theme_stages', function (Blueprint $table) {
+        Schema::create('structures', function (Blueprint $table) {
             $table->id();
+            $table->string('nom');
+            $table->foreignId('responsable_id')->nullable()->constrained('users')->onDelete('set null'); // Responsable de la structure (un utilisateur)
+            $table->text('description')->nullable();
             $table->timestamps();
         });
     }
@@ -22,6 +25,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('theme_stages');
+        Schema::dropIfExists('structures');
     }
 };

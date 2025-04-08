@@ -11,12 +11,10 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('structures', function (Blueprint $table) {
+        Schema::create('universites', function (Blueprint $table) {
             $table->id();
-            $table->string('nom');
-            $table->string('sigle')->nullable();
-            $table->string('localisation')->nullable();
-            $table->text('description')->nullable();
+            $table->string('nom_universite')->unique(); // Nom de l'université (devrait être unique)
+            $table->string('adresse')->nullable();
             $table->timestamps();
         });
     }
@@ -26,6 +24,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('structures');
+        Schema::dropIfExists('universites');
     }
 };

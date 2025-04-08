@@ -13,10 +13,10 @@ return new class extends Migration
     {
         Schema::create('notifications', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('utilisateur_id')->constrained('utilisateurs')->onDelete('cascade');
-            $table->string('titre');
-            $table->text('message');
-            $table->boolean('est_lue')->default(false);
+            $table->foreignId('user_id')->constrained('users')->onDelete('cascade'); // L'utilisateur destinataire de la notification
+            $table->string('message');
+            $table->dateTime('date_envoi')->nullable();
+            $table->enum('statut', ['lu', 'non lu'])->default('non lu');
             $table->timestamps();
         });
     }
@@ -29,4 +29,3 @@ return new class extends Migration
         Schema::dropIfExists('notifications');
     }
 };
-?>

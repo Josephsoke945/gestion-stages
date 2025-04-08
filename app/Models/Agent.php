@@ -2,47 +2,46 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Agent extends Model
 {
-    protected $table = 'agents';
-    protected $primaryKey = 'utilisateur_id';
-    public $incrementing = false;
+    use HasFactory;
 
     protected $fillable = [
-        'utilisateur_id',
+        'user_id',
         'matricule',
-        'structure_id',
-        'est_responsable_structure',
-        'est_dpa',
-        'est_maitre_stage',
+        'fonction',
+        'date_embauche',
+        'universite_responsable_id', // Assurez-vous d'ajouter ce champ au fillable
     ];
 
-    // 🔗 L’agent est un utilisateur
-    public function utilisateur(): BelongsTo
+    /**
+     * Get the user that owns the Agent.
+     */
+    public function user(): BelongsTo
     {
-        return $this->belongsTo(Utilisateur::class, 'utilisateur_id');
+        return $this->belongsTo(User::class);
     }
 
-    // 🔗 L’agent peut appartenir à une structure
-    public function structure(): BelongsTo
+    /**
+     * Get all the structures where this agent is the responsable.
+     */
+    public function structuresResponsable(): HasMany
     {
-        return $this->belongsTo(Structure::class, 'structure_id');
+        return $this->hasMany(Structure::class, 'responsable_id');
     }
 
-    // 🔗 L’agent peut être maître de stage sur plusieurs affectations
-    public function affectationsStages(): HasMany
+    /**
+     * Get the universite for which this agent is the responsable (if any).
+     */
+    public function universiteResponsable(): BelongsTo
     {
-        return $this->hasMany(Affectation::class, 'maitre_stage_id');
+        return $this->belongsTo(Universite::class, 'universite_responsable_id');
     }
 
-    // 🔗 L’agent peut être responsable de plusieurs affectations de demande
-    public function affectationsDemandes(): HasMany
-    {
-        return $this->hasMany(Affectation::class, 'agent_responsable_id');
-    }
+    // Définir d'autres relations Eloquent ici ultérieurement (maître de stage, etc.)
 }

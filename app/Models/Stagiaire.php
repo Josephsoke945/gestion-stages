@@ -2,40 +2,39 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Stagiaire extends Model
 {
     use HasFactory;
 
-    protected $table = 'stagiaires';
     protected $primaryKey = 'id_stagiaire';
+    public $incrementing = true;
+    protected $keyType = 'int';
 
     protected $fillable = [
-        'nom',
-        'prenom',
-        'email',
-        'telephone',
-        'est_stagiaire_academique',
-        'utilisateur_id',
+        'user_id',
+        'niveau_etude',
+        'universite_id',
     ];
 
-    // 🔁 Relation avec Utilisateur
-    public function utilisateur()
+    /**
+     * Get the user that owns the Stagiaire.
+     */
+    public function user(): BelongsTo
     {
-        return $this->belongsTo(Utilisateur::class, 'utilisateur_id');
+        return $this->belongsTo(User::class);
     }
 
-    // 🔁 Un stagiaire peut faire plusieurs demandes de stage
-    public function demandesStage()
+    /**
+     * Get the universite that the Stagiaire belongs to.
+     */
+    public function universite(): BelongsTo
     {
-        return $this->hasMany(DemandeStage::class, 'stagiaire_id');
+        return $this->belongsTo(Universite::class);
     }
 
-    // 🔁 Un stagiaire peut être lié à plusieurs stages via DemandeUneMediation (si concerné)
-    public function stages()
-    {
-        return $this->belongsToMany(Stage::class, 'demande_une_mediation', 'stagiaire_id', 'stage_id');
-    }
+    // Définir d'autres relations Eloquent ici ultérieurement
 }

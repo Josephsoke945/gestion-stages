@@ -2,37 +2,41 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class AffectationMaitreStage extends Model
 {
-    protected $table = 'affectation_maitre_stages';
+    use HasFactory;
 
     protected $fillable = [
         'stage_id',
-        'agent_id',
-        'valide',
-        'motif',
-        'modifie_par',
-        'termine',
+        'maitre_stage_id',
+        'date_affectation',
+        'statut',
+        'motif_refus',
+    ];
+
+    protected $casts = [
+        'date_affectation' => 'date',
     ];
 
     /**
-     * Relations
+     * Get the stage that this affectation belongs to.
      */
-
-    public function stage()
+    public function stage(): BelongsTo
     {
         return $this->belongsTo(Stage::class);
     }
 
-    public function agent()
+    /**
+     * Get the maitre de stage (user) involved in this affectation.
+     */
+    public function maitreStage(): BelongsTo
     {
-        return $this->belongsTo(Agent::class);
+        return $this->belongsTo(User::class, 'maitre_stage_id');
     }
 
-    public function modificateur()
-    {
-        return $this->belongsTo(Utilisateur::class, 'modifie_par');
-    }
+    // Définir d'autres relations Eloquent ici ultérieurement
 }

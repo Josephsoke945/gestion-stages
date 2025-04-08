@@ -11,8 +11,10 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('users', function (Blueprint $table) {
-            $table->string('role')->default('etudiant'); // étudiant par défaut
+        Schema::create('nature_demandes', function (Blueprint $table) {
+            $table->id();
+            $table->string('libelle')->unique(); // Libellé de la nature de la demande (ex: "Académique", "Professionnel")
+            $table->timestamps();
         });
     }
 
@@ -21,8 +23,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('users', function (Blueprint $table) {
-            $table->dropColumn('role');
-        });
+        Schema::dropIfExists('nature_demandes');
     }
 };
