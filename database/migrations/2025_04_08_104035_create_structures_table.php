@@ -13,7 +13,7 @@ return new class extends Migration
     {
         Schema::create('structures', function (Blueprint $table) {
             $table->id();
-            $table->string('nom');
+            //$table->string('nom');
             $table->foreignId('responsable_id')->nullable()->constrained('users')->onDelete('set null'); // Responsable de la structure (un utilisateur)
             $table->text('description')->nullable();
             $table->timestamps();
