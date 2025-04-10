@@ -13,8 +13,9 @@ return new class extends Migration
     {
         Schema::create('demande_attestations', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('stagiaire_id')->constrained('stagiaires', 'id_stagiaire')->onDelete('cascade'); // Spécifiez la clé primaire de la table stagiaires
+            $table->foreignId('stagiaire_id')->constrained('stagiaires', 'id')->onDelete('cascade'); // Correction ici : référence à 'id'
             $table->date('date_demande')->nullable();
+            $table->string('type_attestation')->nullable(); // Ajoute cette ligne
             $table->string('statut')->default('En attente');
             $table->text('motif_refus')->nullable();
             $table->date('date_validation')->nullable();

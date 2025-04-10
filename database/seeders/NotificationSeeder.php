@@ -22,7 +22,7 @@ class NotificationSeeder extends Seeder
                 'user_id' => $user->id,
                 'message' => 'Ceci est un message de test pour la notification.',
                 'date_envoi' => now(),
-                'statut' => 'non_lu', // Vous pouvez choisir un statut approprié
+                'statut' => 'non lu', // Vous pouvez choisir un statut approprié
                 'created_at' => now(),
                 'updated_at' => now(),
             ]);

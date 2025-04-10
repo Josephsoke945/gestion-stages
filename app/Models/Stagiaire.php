@@ -13,7 +13,7 @@ class Stagiaire extends Model
 
     protected $primaryKey = 'id';
     public $incrementing = true;
-    protected $keyType = 'int';
+    protected $keyType = 'int'; // ou 'bigint' si vous préférez être explicite
 
     protected $fillable = [
         'user_id',

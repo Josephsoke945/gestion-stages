@@ -22,7 +22,7 @@ return new class extends Migration
             $table->string('password'); // Le mot de passe est requis par défaut dans Laravel
             $table->string('telephone')->nullable();
             $table->date('date_d_inscription')->nullable();
-            $table->enum('role', ['stagiaire', 'Agent', 'université'])->default('stagiaire');
+            $table->string('role', 255)->default('stagiaire'); // Modification ici : string avec longueur 255
             $table->rememberToken();
             $table->timestamps();
         });

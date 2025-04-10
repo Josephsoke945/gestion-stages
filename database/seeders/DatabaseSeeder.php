@@ -22,20 +22,19 @@ class DatabaseSeeder extends Seeder
         }
 
         $this->call([
-            ResponsableStructureSeeder::class, // Créer l'utilisateur responsable ET l'agent
+            ResponsableStructureSeeder::class, // Crée l'utilisateur responsable ET l'agent responsable structure
             ResponsableSeeder::class, // Les autres responsables (agents, universités, etc.)
-            NatureDemandeSeeder::class,
             StructureSeeder::class,
-            StagiaireSeeder::class,
-            DemandeStageSeeder::class,
+            UniversiteSeeder::class, // Les universités doivent être créées avant les stagiaires
+            StagiaireSeeder::class, // Les stagiaires doivent être créés en premier
+            StagiaireUserSeeder::class, // Lie les stagiaires aux utilisateurs après la création des stagiaires
+            DemandeStageSeeder::class, // Les demandes de stage viennent après les stagiaires et les structures
             ThemeStageSeeder::class,
             StageSeeder::class,
-            StagiaireUserSeeder::class,
-            UniversiteSeeder::class,
             AffectationMaitreStageSeeder::class,
-            AffectationResponsableStructureSeeder::class, // Utilise l'agent responsable créé
+            AffectationResponsableStructureSeeder::class, // Utilise l'agent responsable structure créé
             NotificationSeeder::class,
-            DemandeAttestationSeeder::class,
+            DemandeAttestationSeeder::class, // Les demandes d'attestation viennent APRÈS la création des stagiaires
         ]);
     }
 }

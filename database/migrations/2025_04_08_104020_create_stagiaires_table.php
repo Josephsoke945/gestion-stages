@@ -12,7 +12,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('stagiaires', function (Blueprint $table) {
-            $table->id('id_stagiaire');
+            $table->id(); // Laisse Laravel nommer la clé primaire 'id'
             $table->foreignId('user_id')->constrained('users')->onDelete('cascade'); // Clé étrangère vers la table users
             $table->string('niveau_etude');
             $table->foreignId('universite_id')->nullable()->constrained('universites')->onDelete('set null');

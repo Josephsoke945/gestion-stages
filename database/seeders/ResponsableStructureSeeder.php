@@ -42,7 +42,7 @@ class ResponsableStructureSeeder extends Seeder
             [
                 'matricule' => 'RESP-001', // Vous pouvez changer cette matricule si nécessaire
                 'fonction' => 'Responsable de Structure',
-                'date_prise_fonction' => now()->subYears(5),
+                'date_embauche' => now()->subYears(5),
                 'created_at' => now(),
                 'updated_at' => now(),
             ]

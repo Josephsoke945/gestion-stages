@@ -14,7 +14,7 @@ class DemandeStage extends Model
     protected $fillable = [
         'stagiaire_id',
         'structure_id',
-        'nature_demande_id',
+        'nature', // Ajout de 'nature' aux fillable
         'statut',
         'date_soumission',
         'structure_souhaitee',
@@ -29,7 +29,7 @@ class DemandeStage extends Model
      */
     public function stagiaire(): BelongsTo
     {
-        return $this->belongsTo(Stagiaire::class, 'stagiaire_id', 'id'); // Ajout des clés étrangères
+        return $this->belongsTo(Stagiaire::class);
     }
 
     /**
@@ -37,16 +37,14 @@ class DemandeStage extends Model
      */
     public function structure(): BelongsTo
     {
-        return $this->belongsTo(Structure::class); // La clé étrangère 'structure_id' est conventionnelle
+        return $this->belongsTo(Structure::class);
     }
 
-    /**
-     * Get the nature of this demande.
-     */
-    public function natureDemande(): BelongsTo
-    {
-        return $this->belongsTo(NatureDemande::class); // La clé étrangère 'nature_demande_id' est conventionnelle
-    }
+    // Suppression de la relation vers NatureDemande
+    // public function natureDemande(): BelongsTo
+    // {
+    //     return $this->belongsTo(NatureDemande::class);
+    // }
 
     /**
      * Get the stage created from this demande (if accepted).

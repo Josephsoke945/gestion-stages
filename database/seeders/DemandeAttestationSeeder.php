@@ -19,10 +19,10 @@ class DemandeAttestationSeeder extends Seeder
 
         if ($stagiaire) {
             DemandeAttestation::create([
-                'stagiaire_id' => $stagiaire->id_stagiaire,
+                'stagiaire_id' => $stagiaire->id,
                 'type_attestation' => 'Fin de stage', // Vous pouvez choisir un type approprié
                 'date_demande' => now(),
-                'statut' => 'en_cours', // Vous pouvez choisir un statut approprié
+                'statut' => 'En attente', // Utilisation de la valeur par défaut de la migration
                 'created_at' => now(),
                 'updated_at' => now(),
             ]);
