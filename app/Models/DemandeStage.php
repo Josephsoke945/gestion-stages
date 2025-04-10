@@ -29,7 +29,7 @@ class DemandeStage extends Model
      */
     public function stagiaire(): BelongsTo
     {
-        return $this->belongsTo(Stagiaire::class);
+        return $this->belongsTo(Stagiaire::class, 'stagiaire_id', 'id'); // Ajout des clés étrangères
     }
 
     /**
@@ -37,7 +37,7 @@ class DemandeStage extends Model
      */
     public function structure(): BelongsTo
     {
-        return $this->belongsTo(Structure::class);
+        return $this->belongsTo(Structure::class); // La clé étrangère 'structure_id' est conventionnelle
     }
 
     /**
@@ -45,7 +45,7 @@ class DemandeStage extends Model
      */
     public function natureDemande(): BelongsTo
     {
-        return $this->belongsTo(NatureDemande::class);
+        return $this->belongsTo(NatureDemande::class); // La clé étrangère 'nature_demande_id' est conventionnelle
     }
 
     /**

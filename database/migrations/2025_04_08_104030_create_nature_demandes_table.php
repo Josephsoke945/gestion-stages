@@ -13,7 +13,7 @@ return new class extends Migration
     {
         Schema::create('nature_demandes', function (Blueprint $table) {
             $table->id();
-            $table->string('libelle')->unique(); // Libellé de la nature de la demande (ex: "Académique", "Professionnel")
+            $table->string('libelle')->unique(); // Libellé de la nature de la demande (Individuel, En équipe)
             $table->timestamps();
         });
     }

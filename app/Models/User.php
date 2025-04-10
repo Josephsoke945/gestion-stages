@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
+use Illuminate\Database\Eloquent\Relations\HasOne; // N'oubliez pas d'importer HasOne
 
 class User extends Authenticatable
 {
@@ -52,5 +53,11 @@ class User extends Authenticatable
         'date_d_inscription' => 'date',
     ];
 
-    // Définir les relations Eloquent ici ultérieurement
+    /**
+     * Get the stagiaire associated with the user.
+     */
+    public function stagiaire(): HasOne
+    {
+        return $this->hasOne(Stagiaire::class, 'user_id', 'id');
+    }
 }

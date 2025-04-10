@@ -21,6 +21,7 @@ class Stage extends Model
         'statut',
         'documents_stage',
         'note',
+        'type',
     ];
 
     protected $casts = [
@@ -29,11 +30,11 @@ class Stage extends Model
     ];
 
     /**
-     * Get the demande attestation that created this stage.
+     * Get the demande de stage that created this stage.
      */
-    public function demandeAttestation(): BelongsTo
+    public function demandeStage(): BelongsTo
     {
-        return $this->belongsTo(DemandeAttestation::class);
+        return $this->belongsTo(DemandeStage::class);
     }
 
     /**
@@ -59,17 +60,6 @@ class Stage extends Model
     {
         return $this->hasOne(AffectationMaitreStage::class);
     }
-
-    /**
-     * Get the stagiaires participating in this stage (if it's a team stage).
-     * This assumes a pivot table 'stage_stagiaire' for a many-to-many relationship.
-     * Based on the description, it might be a one-to-one or one-to-many from DemandeStage to Stage.
-     * Let's clarify this relationship later if needed.
-     */
-    // public function stagiaires(): BelongsToMany
-    // {
-    //     return $this->belongsToMany(Stagiaire::class, 'stage_stagiaire');
-    // }
 
     // Définir d'autres relations Eloquent ici ultérieurement
 }

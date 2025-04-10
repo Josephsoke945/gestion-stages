@@ -13,7 +13,7 @@ return new class extends Migration
     {
         Schema::create('stages', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('demande_stage_id')->constrained('demande_stages')->onDelete('cascade'); // Correction ici
+            $table->foreignId('demande_stage_id')->constrained('demande_stages')->onDelete('cascade');
             $table->foreignId('structure_id')->constrained('structures')->onDelete('cascade');
             $table->foreignId('theme_stage_id')->constrained('theme_stages')->onDelete('cascade');
             $table->date('date_debut')->nullable();
@@ -21,6 +21,7 @@ return new class extends Migration
             $table->enum('statut', ['En cours', 'Terminé'])->default('En cours');
             $table->text('documents_stage')->nullable();
             $table->float('note')->nullable();
+            $table->enum('type', ['academique', 'professionnel'])->nullable(); // Ajout de la colonne 'type'
             $table->timestamps();
         });
     }
