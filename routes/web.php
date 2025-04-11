@@ -5,6 +5,7 @@ use App\Http\Controllers\StructureController;
 use App\Http\Controllers\AgentController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DemandeController;
+use App\Http\Controllers\UserController;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -18,14 +19,20 @@ Route::get('/', function () {
     ]);
 });
 
-    Route::get('/dashboard', function () {
-    return Inertia::render('Dashboard');
+Route::get('/dashboard', function () {
+    $user = auth()->user();
+
+    if ($user->role === 'stagiaire') {
+        $structures = \App\Models\Structure::select('id', 'libelle')->get();
+
+        return Inertia::render('Dashboard/Stagiaire', [
+            'structures' => $structures,
+        ]);
+    }
+
+    // Tableau de bord par défaut pour les agents
+    return app(DashboardController::class)->index();
 })->middleware(['auth', 'verified'])->name('dashboard');
-
-
-Route::middleware(['auth'])->group(function () {
-    Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
-});
 
 Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
@@ -44,5 +51,12 @@ Route::put('/agents/{agent}', [AgentController::class, 'update'])->name('agents.
 Route::delete('/agents/{agent}', [AgentController::class, 'destroy'])->name('agents.destroy');
 
 Route::post('/demande', [DemandeController::class, 'store'])->name('demande.store');
+
+Route::middleware('auth')->group(function () {
+    Route::get('/users', [UserController::class, 'index'])->name('users.index'); // Afficher la liste des utilisateurs
+    Route::post('/users', [UserController::class, 'store'])->name('users.store'); // Ajouter un utilisateur
+    Route::put('/users/{user}', [UserController::class, 'update'])->name('users.update'); // Modifier un utilisateur
+    Route::delete('/users/{user}', [UserController::class, 'destroy'])->name('users.destroy'); // Supprimer un utilisateur
+});
 
 require __DIR__.'/auth.php';

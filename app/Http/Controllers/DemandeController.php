@@ -12,3 +12,4 @@ class DemandeController extends Controller
         return back()->with('success', 'Votre demande a été soumise avec succès.');
     }
 }
+

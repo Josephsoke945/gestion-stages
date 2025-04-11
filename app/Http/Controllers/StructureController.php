@@ -9,8 +9,11 @@ class StructureController extends Controller
 {
     public function index()
     {
-        $structures = Structure::with('responsable:id,nom')->get(); // Assurez-vous que la colonne s'appelle 'name' ou remplacez-la par la bonne colonne
-        $users = User::select('id', 'nom')->get(); // Récupère les utilisateurs avec leurs noms
+        $structures = Structure::select('id', 'sigle', 'libelle', 'responsable_id', 'description')
+            ->with('responsable:id,nom') // Inclut les données du responsable
+            ->get();
+
+        $users = User::select('id', 'nom')->get();
 
         return Inertia::render('Structures/Index', [
             'structures' => $structures,
