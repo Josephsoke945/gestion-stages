@@ -12,6 +12,8 @@ class Structure extends Model
     use HasFactory;
 
     protected $fillable = [
+        'sigle',          // Ajout de 'sigle'
+        'libelle',        // Ajout de 'libelle'
         'nom',
         'responsable_id',
         'description',
@@ -20,9 +22,9 @@ class Structure extends Model
     /**
      * Get the responsable of the structure.
      */
-    public function responsable(): BelongsTo
+    public function responsable()
     {
-        return $this->belongsTo(User::class, 'responsable_id'); // Spécifie la clé étrangère
+        return $this->belongsTo(User::class, 'responsable_id');
     }
 
     /**
