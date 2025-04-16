@@ -12,19 +12,19 @@ class Structure extends Model
     use HasFactory;
 
     protected $fillable = [
-        'sigle',          // Ajout de 'sigle'
-        'libelle',        // Ajout de 'libelle'
+        'sigle',
+        'libelle',
         'nom',
         'responsable_id',
         'description',
     ];
 
     /**
-     * Get the responsable of the structure.
+     * Relation avec le responsable (uniquement les utilisateurs ayant le rôle 'Agent').
      */
     public function responsable()
     {
-        return $this->belongsTo(User::class, 'responsable_id');
+        return $this->belongsTo(User::class, 'responsable_id')->where('role', 'Agent');
     }
 
     /**

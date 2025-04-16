@@ -5,7 +5,6 @@ import SimpleLayout from '@/Layouts/SimpleLayout.vue'; // Layout sans navigation
 
 const props = defineProps({
   structures: Array,
-  users: Array,
 });
 
 const page = usePage();
@@ -23,7 +22,6 @@ const editingId = ref(null);
 const form = useForm({
   sigle: '',
   libelle: '',
-  responsable_id: '',
   description: '',
 });
 
@@ -31,7 +29,6 @@ function openModal(structure = null) {
   if (structure) {
     form.sigle = structure.sigle;
     form.libelle = structure.libelle;
-    form.responsable_id = structure.responsable_id;
     form.description = structure.description;
     editingId.value = structure.id;
   } else {
@@ -95,7 +92,6 @@ function destroy(id) {
               <tr class="bg-gray-100 text-left">
                 <th class="border p-2">Sigle</th>
                 <th class="border p-2">Libellé</th>
-                <th class="border p-2">Responsable</th>
                 <th class="border p-2">Description</th>
                 <th class="border p-2">Actions</th>
               </tr>
@@ -104,9 +100,6 @@ function destroy(id) {
               <tr v-for="structure in props.structures" :key="structure.id" class="hover:bg-gray-50">
                 <td class="border p-2">{{ structure.sigle }}</td>
                 <td class="border p-2">{{ structure.libelle }}</td>
-                <td class="border p-2">
-                  {{ structure.responsable?.nom ?? '-' }}
-                </td>
                 <td class="border p-2">{{ structure.description ?? '-' }}</td>
                 <td class="border p-2 flex space-x-2">
                   <button @click="openModal(structure)" class="text-blue-600 hover:underline">Modifier</button>
@@ -135,17 +128,6 @@ function destroy(id) {
                 <label class="block font-medium">Libellé</label>
                 <input v-model="form.libelle" class="w-full border rounded p-2" />
                 <div v-if="form.errors.libelle" class="text-red-600">{{ form.errors.libelle }}</div>
-              </div>
-
-              <div>
-                <label class="block font-medium">Responsable</label>
-                <select v-model="form.responsable_id" class="w-full border rounded p-2">
-                  <option value="">-- Sélectionner un responsable --</option>
-                  <option v-for="user in props.users" :key="user.id" :value="user.id">
-                    {{ user.nom }}
-                  </option>
-                </select>
-                <div v-if="form.errors.responsable_id" class="text-red-600">{{ form.errors.responsable_id }}</div>
               </div>
 
               <div>

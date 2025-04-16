@@ -1,32 +1,53 @@
 <script setup>
-import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
+//import Stagiaire from '@/Layouts/AuthenticatedLayout.vue';
 import { Head, useForm } from '@inertiajs/vue3';
 import { ref } from 'vue';
+import Stagiaire from '@/Layouts/Stagiaire.vue';
 
+// Récupération des données passées par Inertia.js
+const props = defineProps(['auth', 'structures']);
+
+// Gestion de l'état de la modale
 const showModal = ref(false);
 
+// Variable pour le message de flash
+const flashMessage = ref('');
+
+// Variable pour le code de suivi
+const codeSuivi = ref('');
+
+// Configuration du formulaire
 const form = useForm({
-    stagiaire_id: '', // Récupéré dynamiquement
+    stagiaire_id: props.auth.user.id, // ID du stagiaire connecté
     structure_id: '',
     nature: 'Individuel',
     structure_souhaitee: '',
     lettre_cv_path: null,
 });
 
+// Fonction pour soumettre le formulaire
 const submitRequest = () => {
     form.post(route('demande_stages.store'), {
-        onSuccess: () => {
+        onSuccess: (response) => {
+            // Supposons que le backend renvoie le code de suivi dans la réponse
+            codeSuivi.value = response.data.code_suivi;
+            flashMessage.value = `Votre demande de stage a été soumise avec succès ! Code de suivi : ${codeSuivi.value}`;
             showModal.value = false;
             form.reset();
         },
+        onError: (errors) => {
+            flashMessage.value = "Une erreur est survenue lors de la soumission de la demande.";
+            console.error('Erreur lors de la soumission :', errors);
+        },
     });
 };
+
 </script>
 
 <template>
     <Head title="Tableau de bord - Stagiaire" />
 
-    <AuthenticatedLayout>
+    <Stagiaire>
         <template #header>
             <h2 class="text-xl font-semibold leading-tight text-gray-800">
                 Tableau de bord - Stagiaire
@@ -37,7 +58,7 @@ const submitRequest = () => {
             <div class="mx-auto max-w-7xl sm:px-6 lg:px-8">
                 <div class="overflow-hidden bg-white shadow-sm sm:rounded-lg">
                     <div class="p-6 bg-white border-b border-gray-200">
-                        <h1 class="text-2xl font-bold mb-4">Bienvenue, {{ $page.props.auth.user.nom }}</h1>
+                        <h1 class="text-2xl font-bold mb-4">Bienvenue, {{ auth.user.nom }}</h1>
                         <p class="mb-4">Ceci est votre tableau de bord en tant que stagiaire.</p>
 
                         <button
@@ -46,6 +67,11 @@ const submitRequest = () => {
                         >
                             Soumettre une demande
                         </button>
+
+                        <!-- Affichage du message de flash avec code de suivi -->
+                        <div v-if="flashMessage" class="mt-4 p-4 bg-green-100 text-green-700 rounded">
+                            {{ flashMessage }}
+                        </div>
                     </div>
                 </div>
             </div>
@@ -61,10 +87,11 @@ const submitRequest = () => {
                         <label for="structure_id" class="block text-sm font-medium text-gray-700">Structure</label>
                         <select v-model="form.structure_id" id="structure_id" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm">
                             <option value="">Sélectionnez la structure souhaitée</option>
-                            <option v-for="structure in $page.props.structures" :key="structure.id" :value="structure.id">
-                                {{ structure.libelle }} <!-- Utilisation de 'libelle' -->
+                            <option v-for="structure in structures" :key="structure.id" :value="structure.id">
+                                {{ structure.libelle }}
                             </option>
                         </select>
+                        <span v-if="form.errors.structure_id" class="text-red-500 text-sm">{{ form.errors.structure_id }}</span>
                     </div>
 
                     <!-- Nature -->
@@ -74,18 +101,14 @@ const submitRequest = () => {
                             <option value="Individuel">Individuel</option>
                             <option value="Groupe">Groupe</option>
                         </select>
+                        <span v-if="form.errors.nature" class="text-red-500 text-sm">{{ form.errors.nature }}</span>
                     </div>
-
-                    <!-- Structure souhaitée -->
-                    <!-- <div class="mb-4">
-                        <label for="structure_souhaitee" class="block text-sm font-medium text-gray-700">Structure souhaitée (ID)</label>
-                        <input type="number" v-model="form.structure_souhaitee" id="structure_souhaitee" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm" />
-                    </div> -->
 
                     <!-- Lettre et CV -->
                     <div class="mb-4">
                         <label for="lettre_cv_path" class="block text-sm font-medium text-gray-700">Lettre et CV</label>
                         <input type="file" @change="form.lettre_cv_path = $event.target.files[0]" id="lettre_cv_path" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm" />
+                        <span v-if="form.errors.lettre_cv_path" class="text-red-500 text-sm">{{ form.errors.lettre_cv_path }}</span>
                     </div>
 
                     <!-- Boutons -->
@@ -100,5 +123,5 @@ const submitRequest = () => {
                 </form>
             </div>
         </div>
-    </AuthenticatedLayout>
+    </Stagiaire>
 </template>

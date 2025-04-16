@@ -25,9 +25,11 @@ const menuOpen = ref(false); // Pour gérer l'affichage du menu hamburger
           <!-- Liens de navigation -->
           <div :class="{'block': menuOpen, 'hidden': !menuOpen}" class="sm:flex space-x-4">
             <Link href="/" class="hover:text-gray-300">Accueil</Link>
+            <Link href="/users" class="hover:text-gray-300">Utilisateurs</Link>
             <Link href="/structures" class="hover:text-gray-300">Structures</Link>
             <Link href="/agents" class="hover:text-gray-300">Agents</Link>
-            <Link href="/stages" class="hover:text-gray-300">Stages</Link>
+            
+            <Link href="/stagiaires" class="hover:text-gray-300">Stagiaires</Link>
           </div>
         </div>
       </div>

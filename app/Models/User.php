@@ -51,13 +51,16 @@ class User extends Authenticatable
         'password' => 'hashed',
         'date_de_naissance' => 'date',
         'date_d_inscription' => 'date',
+        'role' => 'string',
     ];
 
     /**
      * Get the stagiaire associated with the user.
      */
-    public function stagiaire(): HasOne
-    {
-        return $this->hasOne(Stagiaire::class, 'user_id', 'id');
-    }
+   // Ajouter ceci pour la vérification de rôle
+
+public function isStagiaire()
+{
+    return $this->role === 'stagiaire';
+}
 }

@@ -14,10 +14,9 @@ class DemandeStage extends Model
     protected $fillable = [
         'stagiaire_id',
         'structure_id',
-        'nature_demande_id',
+        'nature',
         'statut',
-        'date_soumission',
-        'structure_souhaitee',
+        'lettre_cv_path',
     ];
 
     protected $casts = [
@@ -37,15 +36,7 @@ class DemandeStage extends Model
      */
     public function structure(): BelongsTo
     {
-        return $this->belongsTo(Structure::class); // La clé étrangère 'structure_id' est conventionnelle
-    }
-
-    /**
-     * Get the nature of this demande.
-     */
-    public function natureDemande(): BelongsTo
-    {
-        return $this->belongsTo(NatureDemande::class); // La clé étrangère 'nature_demande_id' est conventionnelle
+        return $this->belongsTo(Structure::class, 'structure_id');
     }
 
     /**

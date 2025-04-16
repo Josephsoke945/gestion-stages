@@ -4,10 +4,9 @@ import { Head, useForm, usePage, router } from '@inertiajs/vue3';
 import SimpleLayout from '@/Layouts/SimpleLayout.vue';
 
 const props = defineProps({
-  agents: Array,
+  stagiaires: Array,
 });
 
-// Gestion du flash message Inertia
 const page = usePage();
 const flash = ref(page.props.flash?.success || '');
 watch(() => page.props.flash, (newVal) => {
@@ -17,12 +16,10 @@ watch(() => page.props.flash, (newVal) => {
   }
 });
 
-// Contrôle de la modale et de la progression du formulaire
 const showModal = ref(false);
 const editingId = ref(null);
 const step = ref(1);
 
-// Définition du formulaire avec tous les champs nécessaires
 const form = useForm({
   nom: '',
   prenom: '',
@@ -30,26 +27,24 @@ const form = useForm({
   telephone: '',
   date_de_naissance: '',
   sexe: '',
-  matricule: '',
-  fonction: '',
-  date_embauche: '',
+  niveau_etude: '',
+  universite: '',
+  filiere: '',
 });
 
-function openModal(agent = null) {
-  step.value = 1; // Réinitialiser la progression
-  if (agent) {
-    // Remplissage des infos personnelles issues de la table users
-    form.nom = agent.user?.nom || '';
-    form.prenom = agent.user?.prenom || '';
-    form.email = agent.user?.email || '';
-    form.telephone = agent.user?.telephone || '';
-    form.date_de_naissance = agent.user?.date_de_naissance || '';
-    form.sexe = agent.user?.sexe || '';
-    // Infos spécifiques de l'agent
-    form.matricule = agent.matricule;
-    form.fonction = agent.fonction;
-    form.date_embauche = agent.date_embauche;
-    editingId.value = agent.id;
+function openModal(stagiaire = null) {
+  step.value = 1;
+  if (stagiaire) {
+    form.nom = stagiaire.user?.nom || '';
+    form.prenom = stagiaire.user?.prenom || '';
+    form.email = stagiaire.user?.email || '';
+    form.telephone = stagiaire.user?.telephone || '';
+    form.date_de_naissance = stagiaire.user?.date_de_naissance || '';
+    form.sexe = stagiaire.user?.sexe || '';
+    form.niveau_etude = stagiaire.niveau_etude;
+    form.universite = stagiaire.universite;
+    form.filiere = stagiaire.filiere;
+    editingId.value = stagiaire.id;
   } else {
     form.reset();
     editingId.value = null;
@@ -66,12 +61,12 @@ function closeModal() {
 
 function submit() {
   if (editingId.value) {
-    form.put(route('agents.update', editingId.value), {
+    form.put(route('stagiaires.update', editingId.value), {
       preserveScroll: true,
       onSuccess: () => closeModal(),
     });
   } else {
-    form.post(route('agents.store'), {
+    form.post(route('stagiaires.store'), {
       preserveScroll: true,
       onSuccess: () => closeModal(),
     });
@@ -79,14 +74,14 @@ function submit() {
 }
 
 function destroy(id) {
-  if (confirm('Voulez-vous vraiment supprimer cet agent ?')) {
-    router.delete(route('agents.destroy', id));
+  if (confirm('Voulez-vous vraiment supprimer ce stagiaire ?')) {
+    router.delete(route('stagiaires.destroy', id));
   }
 }
 </script>
 
 <template>
-  <Head title="Agents" />
+  <Head title="Stagiaires" />
   <SimpleLayout>
     <div class="py-12">
       <div class="mx-auto max-w-7xl sm:px-6 lg:px-8 space-y-8">
@@ -96,16 +91,16 @@ function destroy(id) {
           {{ flash }}
         </div>
 
-        <!-- Bouton pour ouvrir le formulaire -->
+        <!-- Bouton d'ajout -->
         <div class="text-right">
           <button @click="openModal()" class="px-4 py-2 bg-blue-600 text-white rounded shadow hover:bg-blue-700">
-            Ajouter un agent
+            Ajouter un stagiaire
           </button>
         </div>
 
-        <!-- Liste des agents -->
+        <!-- Liste des stagiaires -->
         <div class="bg-white p-6 rounded shadow">
-          <h3 class="text-lg font-bold mb-4">Liste des agents</h3>
+          <h3 class="text-lg font-bold mb-4">Liste des stagiaires</h3>
           <table class="w-full table-auto border-collapse">
             <thead>
               <tr class="bg-gray-100 text-left">
@@ -113,48 +108,46 @@ function destroy(id) {
                 <th class="border p-2">Prénom</th>
                 <th class="border p-2">Email</th>
                 <th class="border p-2">Téléphone</th>
-                <th class="border p-2">Matricule</th>
-                <th class="border p-2">Fonction</th>
+                <th class="border p-2">Niveau</th>
+                <th class="border p-2">Université</th>
+                <th class="border p-2">Filière</th>
                 <th class="border p-2">Actions</th>
               </tr>
             </thead>
             <tbody>
-              <tr v-for="agent in props.agents" :key="agent.id" class="hover:bg-gray-50">
-                <td class="border p-2">{{ agent.user?.nom ?? '-' }}</td>
-                <td class="border p-2">{{ agent.user?.prenom ?? '-' }}</td>
-                <td class="border p-2">{{ agent.user?.email ?? '-' }}</td>
-                <td class="border p-2">{{ agent.user?.telephone ?? '-' }}</td>
-                <td class="border p-2">{{ agent.matricule }}</td>
-                <td class="border p-2">{{ agent.fonction }}</td>
+              <tr v-for="stagiaire in stagiaires.filter(s => s.user?.role === 'stagiaire')" :key="stagiaire.id" class="hover:bg-gray-50">
+                <td class="border p-2">{{ stagiaire.user?.nom }}</td>
+                <td class="border p-2">{{ stagiaire.user?.prenom }}</td>
+                <td class="border p-2">{{ stagiaire.user?.email }}</td>
+                <td class="border p-2">{{ stagiaire.user?.telephone }}</td>
+                <td class="border p-2">{{ stagiaire.niveau_etude }}</td>
+                <td class="border p-2">{{ stagiaire.universite }}</td>
+                <td class="border p-2">{{ stagiaire.filiere }}</td>
                 <td class="border p-2 flex space-x-2">
-                  <button @click="openModal(agent)" class="text-blue-600 hover:underline">Modifier</button>
-                  <button @click="destroy(agent.id)" class="text-red-600 hover:underline">Supprimer</button>
+                  <button @click="openModal(stagiaire)" class="text-blue-600 hover:underline">Modifier</button>
+                  <button @click="destroy(stagiaire.id)" class="text-red-600 hover:underline">Supprimer</button>
                 </td>
               </tr>
             </tbody>
           </table>
         </div>
 
-        <!-- Modale multi-étapes -->
+        <!-- Modale -->
         <div v-if="showModal" class="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50">
           <div class="bg-white p-6 rounded shadow max-w-lg w-full">
             <h3 class="text-lg font-bold mb-4">
               {{ editingId ? 'Modifier un agent' : 'Ajouter un agent' }}
             </h3>
 
-            <!-- Barre de progression & indication d'étape -->
             <div class="mb-4">
               <div class="text-sm text-gray-600 mb-1">Étape {{ step }} sur 2</div>
-              <div class="w-full h-2 bg-gray-200 rounded-full overflow-hidden">
-                <div class="h-full bg-blue-500 transition-all duration-500"
-                     :style="{ width: step === 1 ? '50%' : '100%' }">
-                </div>
+              <div class="w-full h-2 bg-gray-200 rounded-full">
+                <div class="h-full bg-blue-500 transition-all" :style="{ width: step === 1 ? '50%' : '100%' }"></div>
               </div>
             </div>
 
-            <!-- Formulaire scindé en 2 étapes -->
             <form @submit.prevent="submit" class="space-y-4">
-              <!-- Étape 1 : Informations personnelles -->
+              <!-- Étape 1 -->
               <div v-if="step === 1" class="space-y-4">
                 <div>
                   <label class="block font-medium">Nom</label>
@@ -173,7 +166,7 @@ function destroy(id) {
                 </div>
                 <div>
                   <label class="block font-medium">Téléphone</label>
-                  <input type="number" v-model="form.telephone" class="w-full border rounded p-2" />
+                  <input v-model="form.telephone" class="w-full border rounded p-2" />
                   <div v-if="form.errors.telephone" class="text-red-600">{{ form.errors.telephone }}</div>
                 </div>
                 <div>
@@ -184,45 +177,50 @@ function destroy(id) {
                 <div>
                   <label class="block font-medium">Sexe</label>
                   <select v-model="form.sexe" class="w-full border rounded p-2">
-                    <option value="">Sélectionner le sexe</option>
-                    <option value="Homme">Masculin</option>
-                    <option value="Femme">Féminin</option>
+                    <option value="">Sélectionner</option>
+                    <option value="Homme">Homme</option>
+                    <option value="Femme">Femme</option>
                   </select>
                   <div v-if="form.errors.sexe" class="text-red-600">{{ form.errors.sexe }}</div>
                 </div>
               </div>
 
-              <!-- Étape 2 : Informations professionnelles -->
+              <!-- Étape 2 -->
               <div v-if="step === 2" class="space-y-4">
                 <div>
-                  <label class="block font-medium">Matricule</label>
-                  <input v-model="form.matricule" class="w-full border rounded p-2" />
-                  <div v-if="form.errors.matricule" class="text-red-600">{{ form.errors.matricule }}</div>
+                  <label class="block font-medium">Niveau d'étude</label>
+                  <select v-model="form.niveau_etude" class="w-full border rounded p-2">
+                    <option value="">Sélectionner</option>
+                    <option value="Licence 1">Licence 1</option>
+                    <option value="Licence 2">Licence 2</option>
+                    <option value="Licence 3">Licence 3</option>
+                    <option value="Master 1">Master 1</option>
+                    <option value="Master 2">Master 2</option>
+                    <option value="Autre">Autre</option>
+                  </select>
+                  <div v-if="form.errors.niveau_etude" class="text-red-600">{{ form.errors.niveau_etude }}</div>
                 </div>
                 <div>
-                  <label class="block font-medium">Fonction</label>
-                  <input v-model="form.fonction" class="w-full border rounded p-2" />
-                  <div v-if="form.errors.fonction" class="text-red-600">{{ form.errors.fonction }}</div>
+                  <label class="block font-medium">Université</label>
+                  <input v-model="form.universite" class="w-full border rounded p-2" />
+                  <div v-if="form.errors.universite" class="text-red-600">{{ form.errors.universite }}</div>
                 </div>
                 <div>
-                  <label class="block font-medium">Date d'embauche</label>
-                  <input type="date" v-model="form.date_embauche" class="w-full border rounded p-2" />
-                  <div v-if="form.errors.date_embauche" class="text-red-600">{{ form.errors.date_embauche }}</div>
+                  <label class="block font-medium">Filière</label>
+                  <input v-model="form.filiere" class="w-full border rounded p-2" />
+                  <div v-if="form.errors.filiere" class="text-red-600">{{ form.errors.filiere }}</div>
                 </div>
               </div>
 
-              <!-- Boutons de navigation et soumission -->
               <div class="flex justify-between">
                 <button type="button" @click="step > 1 ? step-- : closeModal()" class="px-4 py-2 bg-gray-400 text-white rounded">
                   {{ step > 1 ? 'Précédent' : 'Annuler' }}
                 </button>
-
                 <button v-if="step < 2" type="button" @click="step++" class="px-4 py-2 bg-blue-500 text-white rounded">
                   Suivant
                 </button>
-
                 <button v-else type="submit" class="px-4 py-2 bg-blue-600 text-white rounded">
-                  {{ editingId ? 'Mettre à jour' : 'Ajouter' }}
+                  {{ editingId ? 'Ajouter ':'Mettre à jour'  }}
                 </button>
               </div>
             </form>
