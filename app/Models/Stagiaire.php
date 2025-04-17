@@ -11,12 +11,22 @@ class Stagiaire extends Model
 {
     use HasFactory;
 
+    protected $table = 'stagiaires';
+    protected $primaryKey = 'id_stagiaire'; // 🔑 clé primaire personnalisée
+    protected $keyType = 'int'; // ou 'string' si ta clé est une chaîne
+    public $incrementing = true; // ou false si la clé n'est pas auto-incrémentée
+    
     protected $fillable = [
         'user_id',
         'niveau_etude',
         'universite',
         'filiere',
     ];
+    public function getRouteKeyName()
+{
+    return 'id_stagiaire';
+}
+
 
     public function user(): BelongsTo
     {
@@ -25,6 +35,6 @@ class Stagiaire extends Model
 
     public function demandesStages(): HasMany
     {
-        return $this->hasMany(DemandeStage::class, 'stagiaire_id', 'id');
+        return $this->hasMany(DemandeStage::class, 'stagiaire_id', 'id_stagiaire');
     }
 }

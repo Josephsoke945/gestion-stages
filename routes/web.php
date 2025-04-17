@@ -62,13 +62,6 @@ Route::middleware('auth')->group(function () {
     Route::put('/users/{user}', [UserController::class, 'update'])->name('users.update'); // Modifier un utilisateur
     Route::delete('/users/{user}', [UserController::class, 'destroy'])->name('users.destroy'); // Supprimer un utilisateur
 });
-
 Route::resource('stagiaires', StagiaireController::class);
-Route::get('/stagiaires/{stagiaire}/demandes', [StagiaireController::class, 'demandes'])->name('stagiaires.demandes');
-Route::get('/stagiaires/{stagiaire}/demandes/{demande}', [StagiaireController::class, 'showDemande'])->name('stagiaires.demandes.show');
-Route::get('/stagiaires/{stagiaire}/demandes/{demande}/edit', [StagiaireController::class, 'editDemande'])->name('stagiaires.demandes.edit');
-Route::put('/stagiaires/{stagiaire}/demandes/{demande}', [StagiaireController::class, 'updateDemande'])->name('stagiaires.demandes.update');
-Route::get('/stagiaires/{stagiaire}/demandes/{demande}/delete', [StagiaireController::class, 'deleteDemande'])->name('stagiaires.demandes.delete');
-Route::get('/stagiaires/{stagiaire}/demandes/{demande}/show', [StagiaireController::class, 'showDemande'])->name('stagiaires.demandes.show');
 
 require __DIR__.'/auth.php';
