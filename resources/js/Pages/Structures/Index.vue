@@ -27,6 +27,10 @@
           <span>{{ flash }}</span>
         </div>
 
+        <div v-if="$page.props.flash && $page.props.flash.error" class="p-4 bg-red-100 border-l-4 border-red-500 text-red-700 rounded shadow-sm">
+          {{ $page.props.flash.error }}
+        </div>
+
         <!-- Liste des structures -->
         <div class="bg-white rounded-lg shadow-md overflow-hidden">
           <div class="p-6 border-b border-gray-200">

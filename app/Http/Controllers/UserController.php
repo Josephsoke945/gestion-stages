@@ -7,11 +7,17 @@ use Illuminate\Http\Request;
 use Inertia\Inertia;
 use App\Models\Agent;
 use App\Models\Stagiaire;
+use Illuminate\Support\Facades\Auth;
 
 class UserController extends Controller
 {
     public function index()
     {
+        // Vérifiez si l'utilisateur est admin
+        if (Auth::user()->role !== 'admin') {
+            return redirect()->route('dashboard')->with('error', 'Accès non autorisé.');
+        }
+
         $users = User::select('id', 'nom', 'email', 'role', 'created_at')->get();
 
         return Inertia::render('Users/Index', [
@@ -21,6 +27,11 @@ class UserController extends Controller
 
     public function store(Request $request)
     {
+        // Vérifiez si l'utilisateur est admin
+        if (Auth::user()->role !== 'admin') {
+            return redirect()->route('dashboard')->with('error', 'Accès non autorisé.');
+        }
+
         $validated = $request->validate([
             'nom' => 'required|string|max:255',
             'email' => 'required|email|max:255|unique:users,email',

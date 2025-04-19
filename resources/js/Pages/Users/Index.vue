@@ -28,6 +28,10 @@
           <span>{{ $page.props.flash.success }}</span>
         </div>
 
+        <div v-if="$page.props.flash && $page.props.flash.error" class="p-4 bg-red-100 border-l-4 border-red-500 text-red-700 rounded shadow-sm">
+          {{ $page.props.flash.error }}
+        </div>
+
         <!-- Liste des utilisateurs -->
         <div class="bg-white rounded-lg shadow-md overflow-hidden">
           <div class="px-6 py-4 border-b border-gray-200">

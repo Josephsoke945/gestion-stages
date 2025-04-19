@@ -1,70 +1,247 @@
 <?php
+
 namespace App\Http\Controllers;
 
+use App\Models\Structure;
+use App\Models\User;
 use App\Models\DemandeStage;
+use App\Models\Stagiaire;
+use App\Models\MembreGroupe;
+use App\Mail\DemandeConfirmationMarkdown;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
-use App\Mail\DemandeSoumise;
+use Inertia\Inertia;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 
 class DemandeController extends Controller
 {
+    /**
+     * Affiche le formulaire de demande de stage
+     */
+    public function create()
+    {
+        $structures = Structure::all();
+        $users = User::where('id', '!=', Auth::id())->get();
+        
+        return Inertia::render('Stagiaire/Dashboard', [
+            'structures' => $structures,
+            'users' => $users
+        ]);
+    }
+    
+    /**
+     * Enregistre une nouvelle demande de stage
+     */
     public function store(Request $request)
     {
-        // Validation des données
+        // Validation de la requête
         $validated = $request->validate([
-            'stagiaire_id' => 'required|exists:users,id',
+            'nom' => 'required|string|max:255',
+            'prenom' => 'required|string|max:255',
+            'email' => 'required|email|max:255',
+            'telephone' => 'required|string|max:20',
+            'universite' => 'required|string|max:255',
+            'filiere' => 'required|string|max:255',
+            'niveau_etude' => 'required|string|max:255',
+            'date_debut' => 'required|date',
+            'date_fin' => 'required|date|after:date_debut',
             'structure_id' => 'required|exists:structures,id',
+            'type' => 'required|in:Académique,Professionnelle',
             'nature' => 'required|in:Individuel,Groupe',
             'lettre_cv_path' => 'nullable|file|mimes:pdf,doc,docx|max:2048',
+            'membres' => 'nullable|array',
+            'membres.*' => 'exists:users,id',
         ]);
-
-        // Vérification du fichier lettre et CV
-        if ($request->hasFile('lettre_cv_path')) {
-            $validated['lettre_cv_path'] = $request->file('lettre_cv_path')->store('lettres_cv', 'public');
+        
+        // Début de la transaction pour assurer l'intégrité des données
+        DB::beginTransaction();
+        
+        try {
+            // Mettre à jour les informations de l'utilisateur
+            $user = User::findOrFail(Auth::id());
+            $user->update([
+                'nom' => $validated['nom'],
+                'prenom' => $validated['prenom'],
+                'email' => $validated['email'],
+                'telephone' => $validated['telephone'],
+            ]);
+            
+            // Créer ou mettre à jour les informations du stagiaire
+            $stagiaire = Stagiaire::updateOrCreate(
+                ['user_id' => Auth::id()],
+                [
+                    'universite' => $validated['universite'],
+                    'filiere' => $validated['filiere'],
+                    'niveau_etude' => $validated['niveau_etude'],
+                ]
+            );
+            
+            // Upload du fichier s'il existe
+            $path = null;
+            if ($request->hasFile('lettre_cv_path') && $request->file('lettre_cv_path')->isValid()) {
+                $path = $request->file('lettre_cv_path')->store('documents', 'public');
+            }
+            
+            // Générer un code de suivi unique
+            $codeSuivi = strtoupper(Str::random(8));
+            Log::info('Code de suivi généré : ' . $codeSuivi);
+            
+            // Créer la demande de stage
+            $demande = DemandeStage::create([
+                'stagiaire_id' => $stagiaire->id_stagiaire,
+                'structure_id' => $validated['structure_id'],
+                'date_debut' => $validated['date_debut'],
+                'date_fin' => $validated['date_fin'],
+                'type' => $validated['type'],
+                'nature' => $validated['nature'],
+                'lettre_cv_path' => $path,
+                'code_suivi' => $codeSuivi,
+                'statut' => 'En attente',
+                'date_soumission' => now(),
+            ]);
+            
+            // Si demande en groupe, associer les membres
+            if ($validated['nature'] === 'Groupe' && !empty($validated['membres'])) {
+                foreach ($validated['membres'] as $membreId) {
+                    MembreGroupe::create([
+                        'demande_stage_id' => $demande->id,
+                        'user_id' => $membreId,
+                    ]);
+                }
+            }
+            
+            // Charger la relation structure pour l'email
+            $demande->load('structure');
+            
+            // Envoyer l'email de confirmation
+            try {
+                Mail::to($user->email)->send(new DemandeConfirmationMarkdown($demande, $user));
+                Log::info('Email de confirmation envoyé à ' . $user->email);
+            } catch (\Exception $emailException) {
+                Log::error('Erreur lors de l\'envoi de l\'email: ' . $emailException->getMessage());
+                // On continue le processus même si l'email échoue
+            }
+            
+            // Tout s'est bien passé, on valide la transaction
+            DB::commit();
+            
+            // Vérification avant de retourner
+            Log::info('Demande créée avec succès, ID: ' . $demande->id . ', Code de suivi: ' . $codeSuivi);
+            
+            // Stocker le code de suivi de différentes manières pour s'assurer qu'il est disponible dans la vue
+            session()->flash('code_suivi', $codeSuivi);
+            
+            // Redirection avec données explicites, inclure l'ID de la demande pour l'API d'emails
+            return redirect()->back()->with([
+                'success' => true,
+                'message' => 'Demande soumise avec succès',
+                'code_suivi' => $codeSuivi,
+                'demande_id' => $demande->id
+            ]);
+            
+        } catch (\Exception $e) {
+            // En cas d'erreur, on annule toutes les opérations
+            DB::rollBack();
+            
+            return redirect()->back()->withErrors([
+                'message' => 'Une erreur est survenue lors de la soumission: ' . $e->getMessage()
+            ]);
         }
-
-        // Générer un code de suivi unique
-        $validated['code_suivi'] = strtoupper(Str::random(10));
-
-        // Enregistrer la demande dans la base de données
-        $demande = DemandeStage::create($validated);
-
-        // Envoi de l'email avec le code de suivi
-        Mail::to($request->user()->email)->send(new DemandeSoumise($demande));
-
-        // Retourner la réponse avec succès et code de suivi
-        return response()->json([
-            'message' => 'Votre demande a été soumise avec succès.',
-            'code_suivi' => $demande->code_suivi,
+    }
+    
+    /**
+     * Affiche les détails d'une demande
+     */
+    public function show($id)
+    {
+        $demande = DemandeStage::with(['stagiaire.user', 'structure', 'membres.user'])
+            ->findOrFail($id);
+            
+        // Vérifier que l'utilisateur est autorisé à voir cette demande
+        if ($demande->stagiaire->user_id !== Auth::id()) {
+            abort(403, 'Vous n\'êtes pas autorisé à voir cette demande.');
+        }
+        
+        return Inertia::render('Stagiaire/ShowDemande', [
+            'demande' => $demande
+        ]);
+    }
+    
+    /**
+     * Recherche une demande par code de suivi
+     */
+    public function findByCode(Request $request)
+    {
+        $request->validate([
+            'code_suivi' => 'required|string'
+        ]);
+        
+        $demande = DemandeStage::where('code_suivi', $request->code_suivi)
+            ->with(['stagiaire.user', 'structure'])
+            ->first();
+            
+        if (!$demande) {
+            return redirect()->back()->withErrors([
+                'code_suivi' => 'Aucune demande trouvée avec ce code de suivi.'
+            ]);
+        }
+        
+        return Inertia::render('Stagiaire/ShowDemande', [
+            'demande' => $demande
         ]);
     }
 
+    /**
+     * Affiche la liste des demandes de l'utilisateur connecté
+     */
     public function index()
     {
-        $stagiaireId = auth()->id(); // ID du stagiaire connecté
-
-        // Récupérer les demandes du stagiaire connecté
-        $demandes = DemandeStage::where('stagiaire_id', $stagiaireId)
-            ->with('structure:id,libelle') // Inclure les informations sur la structure
+        // Récupérer le stagiaire connecté
+        $stagiaire = Stagiaire::where('user_id', Auth::id())->first();
+        
+        if (!$stagiaire) {
+            return redirect()->route('dashboard')->with('error', 'Profil stagiaire non trouvé.');
+        }
+        
+        // Récupérer toutes les demandes du stagiaire
+        $demandes = DemandeStage::where('stagiaire_id', $stagiaire->id_stagiaire)
+            ->with('structure')
+            ->orderBy('created_at', 'desc')
             ->get();
-
-        // Retourner une réponse Inertia
-        return \Inertia\Inertia::render('Demandes/Index', [
-            'demandes' => $demandes,
+            
+        // Retourner la vue avec les demandes
+        return Inertia::render('Stagiaire/MesDemandes', [
+            'demandes' => $demandes
         ]);
     }
 
+    /**
+     * Supprime/annule une demande de stage
+     */
     public function destroy($id)
     {
-        $demande = DemandeStage::where('id', $id)->where('stagiaire_id', auth()->id())->firstOrFail();
-
-        // Supprimer uniquement les demandes en attente
-        if ($demande->statut === null || $demande->statut === 'En attente') {
-            $demande->delete();
-            return back()->with('success', 'Votre demande a été annulée avec succès.');
+        // Récupérer la demande
+        $demande = DemandeStage::findOrFail($id);
+        
+        // Vérifier que l'utilisateur est autorisé à supprimer cette demande
+        $stagiaire = Stagiaire::where('user_id', Auth::id())->first();
+        
+        if (!$stagiaire || $demande->stagiaire_id !== $stagiaire->id_stagiaire) {
+            return redirect()->back()->with('error', 'Vous n\'êtes pas autorisé à annuler cette demande.');
         }
-
-        return back()->with('error', 'Seules les demandes en attente peuvent être annulées.');
+        
+        // Vérifier que la demande est encore en attente
+        if ($demande->statut !== 'En attente') {
+            return redirect()->back()->with('error', 'Vous ne pouvez annuler que les demandes en attente.');
+        }
+        
+        // Supprimer la demande
+        $demande->delete();
+        
+        return redirect()->route('mes.demandes')->with('success', 'Votre demande a été annulée avec succès.');
     }
 }

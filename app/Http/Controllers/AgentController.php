@@ -5,16 +5,19 @@ namespace App\Http\Controllers;
 use App\Models\Agent;
 use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
 
 class AgentController extends Controller
 {
     public function index()
     {
-        $agents = Agent::whereHas('user', function ($query) {
-            $query->where('role', 'agent'); // Utilisez la même casse que dans la base de données
-        })->with('user')->get();
-        
+        if (Auth::user()->role !== 'admin') {
+            return redirect()->route('dashboard')->with('error', 'Accès non autorisé.');
+        }
+
+        $agents = Agent::with('user')->get();
+
         return Inertia::render('Agents/Index', [
             'agents' => $agents,
         ]);

@@ -1,127 +1,1204 @@
 <script setup>
-//import Stagiaire from '@/Layouts/AuthenticatedLayout.vue';
 import { Head, useForm } from '@inertiajs/vue3';
-import { ref } from 'vue';
+import { ref, computed, watch, reactive, onMounted } from 'vue';
 import Stagiaire from '@/Layouts/Stagiaire.vue';
 
-// Récupération des données passées par Inertia.js
-const props = defineProps(['auth', 'structures']);
-
-// Gestion de l'état de la modale
+const props = defineProps(['auth', 'structures', 'users']);
 const showModal = ref(false);
-
-// Variable pour le message de flash
 const flashMessage = ref('');
-
-// Variable pour le code de suivi
+const flashType = ref(''); // 'success', 'error', ou 'warning'
 const codeSuivi = ref('');
+const step = ref(1);
+const searchQuery = ref(''); // Pour la recherche de membres
+const documentsRequired = ref([]); // Pour stocker les documents requis selon le type
 
-// Configuration du formulaire
-const form = useForm({
-    stagiaire_id: props.auth.user.id, // ID du stagiaire connecté
-    structure_id: '',
-    nature: 'Individuel',
-    structure_souhaitee: '',
-    lettre_cv_path: null,
-});
+// Structure pour stocker les documents soumis par membre
+const memberDocuments = reactive({});
+// Structure pour stocker les infos des membres
+const memberInfos = reactive({});
 
-// Fonction pour soumettre le formulaire
-const submitRequest = () => {
-    form.post(route('demande_stages.store'), {
-        onSuccess: (response) => {
-            // Supposons que le backend renvoie le code de suivi dans la réponse
-            codeSuivi.value = response.data.code_suivi;
-            flashMessage.value = `Votre demande de stage a été soumise avec succès ! Code de suivi : ${codeSuivi.value}`;
-            showModal.value = false;
-            form.reset();
-        },
-        onError: (errors) => {
-            flashMessage.value = "Une erreur est survenue lors de la soumission de la demande.";
-            console.error('Erreur lors de la soumission :', errors);
-        },
-    });
+// Fonction pour charger les informations des membres
+const loadMemberInfos = () => {
+  props.users.forEach(user => {
+    memberInfos[user.id] = {
+      nom: user.nom,
+      prenom: user.prenom,
+      email: user.email,
+      telephone: user.telephone
+    };
+  });
+  console.log('Informations des membres chargées:', memberInfos);
 };
 
+// Charger les informations des membres au montage du composant
+onMounted(() => {
+  loadMemberInfos();
+});
+
+const form = useForm({
+  nom: props.auth.user.nom,
+  prenom: props.auth.user.prenom,
+  email: props.auth.user.email,
+  telephone: props.auth.user.telephone,
+  universite: '',
+  filiere: '',
+  niveau_etude: '',
+  date_debut: '',
+  date_fin: '',
+  structure_id: '',
+  nature: 'Individuel',
+  type: 'Académique',
+  lettre_cv_path: null,
+  pieces_jointes: [], // Tableau pour stocker les pièces jointes multiples
+  membres: [],
+});
+
+// Fonction pour gérer le téléchargement de fichier pour un membre
+const handleMemberFile = (memberId, fileType, event) => {
+  const file = event.target.files[0];
+  if (!file) return;
+  
+  if (!memberDocuments[memberId]) {
+    memberDocuments[memberId] = {};
+  }
+  
+  memberDocuments[memberId][fileType] = file;
+  console.log('Document ajouté pour membre', memberId, fileType, file.name);
+};
+
+// Obtenir les informations complètes de l'utilisateur
+const getUserInfo = (userId) => {
+  // Utiliser les informations stockées dans memberInfos
+  if (memberInfos[userId]) {
+    return memberInfos[userId];
+  }
+  
+  // Fallback à la recherche dans props.users
+  const user = props.users.find(user => user.id === userId);
+  if (user) {
+    // Stocker les infos pour une utilisation future
+    memberInfos[userId] = {
+      nom: user.nom,
+      prenom: user.prenom,
+      email: user.email,
+      telephone: user.telephone
+    };
+    return memberInfos[userId];
+  }
+  
+  // Si aucune information n'est trouvée, retourner un objet vide
+  return { nom: '', prenom: '', email: '', telephone: '' };
+};
+
+// Filtrer les utilisateurs selon la recherche
+const filteredUsers = computed(() => {
+  if (!searchQuery.value) return props.users;
+  const query = searchQuery.value.toLowerCase();
+  return props.users.filter(user => 
+    user.nom.toLowerCase().includes(query) || 
+    user.prenom.toLowerCase().includes(query)
+  );
+});
+
+// Surveiller le changement de nature pour réinitialiser les membres si on passe à Individuel
+watch(() => form.nature, (newValue) => {
+  if (newValue === 'Individuel') {
+    form.membres = [];
+  }
+});
+
+// Surveiller le changement de type pour définir les documents requis
+watch(() => form.type, (newValue) => {
+  if (newValue === 'Académique') {
+    documentsRequired.value = ['Lettre de recommandation'];
+  } else {
+    documentsRequired.value = ['CV', 'Diplômes'];
+  }
+});
+
+// Surveiller le changement des membres pour s'assurer d'avoir leurs infos
+watch(() => form.membres, (newMembers) => {
+  if (newMembers && newMembers.length > 0) {
+    // S'assurer que nous avons les informations pour chaque membre
+    newMembers.forEach(memberId => {
+      if (!memberInfos[memberId]) {
+        // Chercher les informations dans props.users
+        const memberData = props.users.find(user => user.id === memberId);
+        if (memberData) {
+          memberInfos[memberId] = {
+            nom: memberData.nom,
+            prenom: memberData.prenom,
+            email: memberData.email,
+            telephone: memberData.telephone
+          };
+          console.log('Informations du membre chargées:', memberInfos[memberId]);
+        }
+      }
+    });
+  }
+}, { deep: true });
+
+// Validations
+const isDateValid = computed(() => {
+  if (!form.date_debut || !form.date_fin) return true;
+  return new Date(form.date_fin) > new Date(form.date_debut);
+});
+
+const validateStep = () => {
+  if (step.value === 1) {
+    return form.nom && form.prenom && form.email && form.telephone &&
+           // Validation supplémentaire pour le mode groupe
+           (form.nature !== 'Groupe' || (form.membres && form.membres.length > 0));
+  }
+  if (step.value === 2) {
+    return form.universite && form.filiere && form.niveau_etude &&
+      form.date_debut && form.date_fin && form.structure_id && isDateValid.value;
+  }
+  if (step.value === 3) {
+    // Validation des documents selon le type de demande
+    // Ici on pourrait ajouter une validation plus stricte si nécessaire
+    return true;
+  }
+  return true;
+};
+
+// Navigation
+const nextStep = () => {
+  if (!validateStep()) {
+    flashMessage.value = "Veuillez remplir tous les champs obligatoires";
+    return;
+  }
+  step.value++;
+  flashMessage.value = '';
+};
+
+const prevStep = () => {
+  step.value--;
+  flashMessage.value = '';
+};
+
+// Soumission
+const submitRequest = () => {
+  // Préparation des données pour inclure les documents des membres
+  const formData = new FormData();
+  
+  // Ajouter les champs de base du formulaire
+  Object.keys(form).forEach(key => {
+    // Ignorer les données qui seront traitées spécialement
+    if (key !== 'lettre_cv_path' && key !== 'membres') {
+      formData.append(key, form[key]);
+    }
+  });
+  
+  // Ajouter la pièce jointe principale
+  if (form.lettre_cv_path) {
+    formData.append('lettre_cv_path', form.lettre_cv_path);
+  }
+  
+  // Ajouter les membres
+  if (form.membres && form.membres.length > 0) {
+    form.membres.forEach((memberId, index) => {
+      formData.append(`membres[${index}]`, memberId);
+      
+      // Ajouter les documents de ce membre
+      if (memberDocuments[memberId]) {
+        Object.keys(memberDocuments[memberId]).forEach(docType => {
+          formData.append(`membre_documents[${memberId}][${docType}]`, memberDocuments[memberId][docType]);
+        });
+      }
+    });
+  }
+  
+  // Soumettre le formulaire avec les données préparées
+  form.post(route('demande_stages.store'), {
+    onSuccess: (response) => {
+      console.log('Réponse complète:', response);
+      
+      // Tentative pour extraire le code de suivi d'où qu'il vienne
+      let codeFound = false;
+      
+      // Vérification dans différents emplacements possibles
+      if (response?.props?.flash?.code_suivi) {
+        codeSuivi.value = response.props.flash.code_suivi;
+        codeFound = true;
+      } else if (response?.props?.code_suivi) {
+        codeSuivi.value = response.props.code_suivi;
+        codeFound = true;
+      } else if (response?.props?.flash?.success?.code_suivi) {
+        codeSuivi.value = response.props.flash.success.code_suivi;
+        codeFound = true;
+      }
+      
+      // Si un code a été trouvé, afficher un message de succès
+      if (codeFound) {
+        showFlashMessage(
+          `<strong>Demande soumise avec succès !</strong><br>Votre code de suivi est : <span class="code-suivi">${codeSuivi.value}</span><br>Conservez-le précieusement pour suivre l'état de votre demande.`, 
+          'success'
+        );
+      } else {
+        // Sinon, montrer un message générique
+        showFlashMessage(
+          `<strong>Demande soumise avec succès !</strong><br>Vous pouvez consulter vos demandes dans la section <a href="${route('mes.demandes')}" class="flash-link">Mes Demandes</a>.`, 
+          'success'
+        );
+      }
+      
+      showModal.value = false;
+      form.reset();
+      Object.keys(memberDocuments).forEach(key => delete memberDocuments[key]);
+      step.value = 1;
+    },
+    onError: (errors) => {
+      console.error("Erreurs:", errors);
+      
+      if (errors.message) {
+        showFlashMessage(`<strong>Erreur !</strong><br>${errors.message}`, 'error');
+      } else {
+        // Message d'erreur détaillé
+        let errorMessage = '<strong>Erreur lors de la soumission :</strong><br>';
+        let hasErrors = false;
+        
+        for (const key in errors) {
+          if (errors[key]) {
+            errorMessage += `- ${errors[key]}<br>`;
+            hasErrors = true;
+          }
+        }
+        
+        if (!hasErrors) {
+          errorMessage += 'Une erreur inattendue est survenue. Veuillez réessayer.';
+        }
+        
+        showFlashMessage(errorMessage, 'error');
+      }
+    },
+  });
+};
+
+// Fonction pour afficher un message flash avec un type
+const showFlashMessage = (message, type = 'success', timeout = 8000) => {
+  flashMessage.value = message;
+  flashType.value = type;
+  
+  if (timeout > 0) {
+    setTimeout(() => {
+      flashMessage.value = '';
+      flashType.value = '';
+    }, timeout);
+  }
+};
 </script>
 
 <template>
-    <Head title="Tableau de bord - Stagiaire" />
+  <Head title="Tableau de bord - Stagiaire" />
+  <Stagiaire>
+    <template #header>
+      <h2 class="text-xl font-semibold text-gray-800">Tableau de bord - Stagiaire</h2>
+    </template>
 
-    <Stagiaire>
-        <template #header>
-            <h2 class="text-xl font-semibold leading-tight text-gray-800">
-                Tableau de bord - Stagiaire
-            </h2>
-        </template>
+    <div class="py-12">
+      <div class="mx-auto max-w-7xl sm:px-6 lg:px-8">
+        <div class="overflow-hidden bg-white shadow-sm sm:rounded-lg p-6">
+          <h1 class="text-2xl font-bold mb-4">Bienvenue, {{ auth.user.nom }}</h1>
+          <button @click="showModal = true" class="btn-primary">
+            Soumettre une demande
+          </button>
+          <div v-if="flashMessage" 
+               class="flash-message" 
+               :class="{
+                 'success': flashType === 'success',
+                 'error': flashType === 'error',
+                 'warning': flashType === 'warning'
+               }">
+            <div class="flash-message-content">
+              <svg v-if="flashType === 'success'" class="flash-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
+              </svg>
+              <svg v-if="flashType === 'error'" class="flash-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd" />
+              </svg>
+              <svg v-if="flashType === 'warning'" class="flash-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
+              </svg>
+              <div class="flash-message-text" v-html="flashMessage"></div>
+              <button @click="flashMessage = ''" class="flash-close-btn">&times;</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
 
-        <div class="py-12">
-            <div class="mx-auto max-w-7xl sm:px-6 lg:px-8">
-                <div class="overflow-hidden bg-white shadow-sm sm:rounded-lg">
-                    <div class="p-6 bg-white border-b border-gray-200">
-                        <h1 class="text-2xl font-bold mb-4">Bienvenue, {{ auth.user.nom }}</h1>
-                        <p class="mb-4">Ceci est votre tableau de bord en tant que stagiaire.</p>
+    <!-- Modal -->
+    <div v-if="showModal" class="modal-overlay">
+      <div class="modal-container">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h2 class="modal-title">Soumettre une demande de stage</h2>
+            <button @click="showModal = false" class="close-btn">&times;</button>
+          </div>
 
-                        <button
-                            @click="showModal = true"
-                            class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-                        >
-                            Soumettre une demande
-                        </button>
+          <div class="step-indicator">
+            <div v-for="n in 4" :key="n" :class="{
+              'step-active': n <= step,
+              'step-inactive': n > step
+            }">
+              <div class="step-number">{{ n }}</div>
+              <div class="step-label">
+                <span v-if="n === 1">Informations</span>
+                <span v-if="n === 2">Détails</span>
+                <span v-if="n === 3">Documents</span>
+                <span v-if="n === 4">Confirmation</span>
+              </div>
+            </div>
+          </div>
 
-                        <!-- Affichage du message de flash avec code de suivi -->
-                        <div v-if="flashMessage" class="mt-4 p-4 bg-green-100 text-green-700 rounded">
-                            {{ flashMessage }}
-                        </div>
-                    </div>
+          <!-- Étape 1 -->
+          <div v-if="step === 1" class="step-content">
+            <div class="form-section">
+              <h3 class="section-title">Vos informations</h3>
+              <div class="form-grid">
+                <div class="form-group">
+                  <label class="required">Nom</label>
+                  <input v-model="form.nom" type="text" class="form-input" :disabled="true" 
+                        title="Ce champ ne peut pas être modifié">
+                  <span v-if="form.errors.nom" class="error-msg">{{ form.errors.nom }}</span>
                 </div>
+                <div class="form-group">
+                  <label class="required">Prénom</label>
+                  <input v-model="form.prenom" type="text" class="form-input" :disabled="true"
+                        title="Ce champ ne peut pas être modifié">
+                </div>
+                <div class="form-group">
+                  <label class="required">Email</label>
+                  <input v-model="form.email" type="email" class="form-input">
+                </div>
+                <div class="form-group">
+                  <label class="required">Téléphone</label>
+                  <input v-model="form.telephone" type="tel" class="form-input">
+                </div>
+              </div>
             </div>
-        </div>
-
-        <!-- Modale pour le formulaire -->
-        <div v-if="showModal" class="fixed inset-0 flex items-center justify-center bg-gray-800 bg-opacity-50">
-            <div class="bg-white p-6 rounded shadow-lg w-1/2">
-                <h2 class="text-xl font-bold mb-4">Soumettre une demande</h2>
-                <form @submit.prevent="submitRequest">
-                    <!-- Structure -->
-                    <div class="mb-4">
-                        <label for="structure_id" class="block text-sm font-medium text-gray-700">Structure</label>
-                        <select v-model="form.structure_id" id="structure_id" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm">
-                            <option value="">Sélectionnez la structure souhaitée</option>
-                            <option v-for="structure in structures" :key="structure.id" :value="structure.id">
-                                {{ structure.libelle }}
-                            </option>
-                        </select>
-                        <span v-if="form.errors.structure_id" class="text-red-500 text-sm">{{ form.errors.structure_id }}</span>
-                    </div>
-
-                    <!-- Nature -->
-                    <div class="mb-4">
-                        <label for="nature" class="block text-sm font-medium text-gray-700">Nature</label>
-                        <select v-model="form.nature" id="nature" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm">
-                            <option value="Individuel">Individuel</option>
-                            <option value="Groupe">Groupe</option>
-                        </select>
-                        <span v-if="form.errors.nature" class="text-red-500 text-sm">{{ form.errors.nature }}</span>
-                    </div>
-
-                    <!-- Lettre et CV -->
-                    <div class="mb-4">
-                        <label for="lettre_cv_path" class="block text-sm font-medium text-gray-700">Lettre et CV</label>
-                        <input type="file" @change="form.lettre_cv_path = $event.target.files[0]" id="lettre_cv_path" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm" />
-                        <span v-if="form.errors.lettre_cv_path" class="text-red-500 text-sm">{{ form.errors.lettre_cv_path }}</span>
-                    </div>
-
-                    <!-- Boutons -->
-                    <div class="flex justify-end">
-                        <button type="button" @click="showModal = false" class="px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600 mr-2">
-                            Annuler
-                        </button>
-                        <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
-                            Soumettre
-                        </button>
-                    </div>
-                </form>
+            
+            <div class="form-section">
+              <h3 class="section-title">Type de demande</h3>
+              <div class="form-grid">
+                <div class="form-group">
+                  <label>Nature</label>
+                  <select v-model="form.nature" class="form-input">
+                    <option>Individuel</option>
+                    <option>Groupe</option>
+                  </select>
+                </div>
+                
+                <div class="form-group" v-if="form.nature === 'Groupe'">
+                  <label>Type de demande</label>
+                  <select v-model="form.type" class="form-input">
+                    <option>Académique</option>
+                    <option>Professionnelle</option>
+                  </select>
+                </div>
+              </div>
+              
+              <!-- Champ conditionnel pour les membres du groupe avec recherche -->
+              <div v-if="form.nature === 'Groupe'" class="form-group">
+                <label class="required">Membres du groupe</label>
+                <div class="search-container">
+                  <input v-model="searchQuery" type="text" placeholder="Rechercher des membres..." 
+                        class="form-input mb-2">
+                </div>
+                <div class="members-select-container">
+                  <div v-for="user in filteredUsers" :key="user.id" 
+                       class="member-option" 
+                       :class="{ 'selected': form.membres.includes(user.id), 'disabled': user.id === auth.user.id }">
+                    <input type="checkbox" 
+                           :value="user.id" 
+                           v-model="form.membres" 
+                           :disabled="user.id === auth.user.id" 
+                           :id="`member-${user.id}`">
+                    <label :for="`member-${user.id}`" class="ml-2">
+                      {{ user.nom }} {{ user.prenom }}
+                      <span v-if="user.id === auth.user.id">(Vous)</span>
+                    </label>
+                  </div>
+                  <p v-if="filteredUsers.length === 0" class="text-gray-500 mt-2">Aucun membre trouvé</p>
+                </div>
+              </div>
             </div>
+            
+            <!-- Affichage des informations des membres sélectionnés en mode grisé -->
+            <div v-if="form.nature === 'Groupe' && form.membres.length > 0" class="form-section">
+              <h3 class="section-title">Informations des membres</h3>
+              <div v-for="memberId in form.membres" :key="memberId" class="membre-info mb-4 p-3 border rounded">
+                <h4 class="font-medium mb-2">{{ getUserInfo(memberId).nom }} {{ getUserInfo(memberId).prenom }}</h4>
+                <div class="form-grid">
+                  <div class="form-group">
+                    <label>Email</label>
+                    <input type="text" :value="getUserInfo(memberId).email" class="form-input" disabled>
+                  </div>
+                  <div class="form-group">
+                    <label>Téléphone</label>
+                    <input type="text" :value="getUserInfo(memberId).telephone" class="form-input" disabled>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Étape 2 (organisée en 2 colonnes) -->
+          <div v-if="step === 2" class="step-content">
+            <!-- Première section (informations académiques) -->
+            <div class="form-section">
+              <h3 class="section-title">Informations </h3>
+              <div class="form-grid">
+                <div class="form-group">
+                  <label class="required">Université</label>
+                  <input v-model="form.universite" type="text" class="form-input">
+                </div>
+                <div class="form-group">
+                  <label class="required">Specialité</label>
+                  <input v-model="form.filiere" type="text" class="form-input">
+                </div>
+                <div class="form-group">
+                  <label class="required">Niveau d'étude</label>
+                  <select v-model="form.niveau_etude" class="form-input">
+                    <option value="">-- Sélectionner --</option>
+                    <option>Licence 1</option>
+                    <option>Licence 2</option>
+                    <option>Licence 3</option>
+                    <option>Master 1</option>
+                    <option>Master 2</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label class="required">Structure</label>
+                  <select v-model="form.structure_id" class="form-input">
+                    <option value="">-- Sélectionner --</option>
+                    <option v-for="structure in structures" :key="structure.id" :value="structure.id">
+                      {{ structure.libelle }}
+                    </option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            <!-- Deuxième section (détails du stage) -->
+            <div class="form-section">
+              <h3 class="section-title">Détails du stage</h3>
+              <div class="form-grid">
+                <div class="form-group">
+                  <label class="required">Date de début</label>
+                  <input v-model="form.date_debut" type="date" class="form-input">
+                </div>
+                <div class="form-group">
+                  <label class="required">Date de fin</label>
+                  <input v-model="form.date_fin" type="date" class="form-input">
+                  <span v-if="!isDateValid" class="error-msg">La date de fin doit être après la date de début</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Étape 3 (Téléchargement des pièces) -->
+          <div v-if="step === 3" class="step-content">
+            <div class="form-section">
+              <h3 class="section-title">Pièces justificatives requises</h3>
+              <div v-if="form.type === 'Académique'">
+                <p class="mb-3">Pour une demande académique, veuillez fournir :</p>
+                <div class="form-group">
+                  <label class="required">Lettre de recommandation</label>
+                  <input type="file" @change="e => form.lettre_cv_path = e.target.files[0]" class="form-input">
+                </div>
+              </div>
+              
+              <div v-else>
+                <p class="mb-3">Pour une demande professionnelle, veuillez fournir :</p>
+                <div class="form-group">
+                  <label class="required">CV</label>
+                  <input type="file" class="form-input mb-2">
+                </div>
+                <div class="form-group">
+                  <label class="required">Diplômes</label>
+                  <input type="file" multiple class="form-input">
+                  <small class="text-gray-500">Vous pouvez sélectionner plusieurs fichiers</small>
+                </div>
+              </div>
+            </div>
+            
+            <!-- Documents pour les membres du groupe -->
+            <div v-if="form.nature === 'Groupe' && form.membres.length > 0" class="form-section">
+              <h3 class="section-title">Documents des membres du groupe</h3>
+              <p class="mb-3">Chaque membre du groupe doit fournir les documents requis.</p>
+              
+              <div v-for="membreId in form.membres" :key="membreId" class="membre-documents mb-4 p-3 border rounded">
+                <h4 class="font-medium mb-2">{{ getUserInfo(membreId).nom }} {{ getUserInfo(membreId).prenom }}</h4>
+                
+                <div v-if="form.type === 'Académique'">
+                  <div class="form-group">
+                    <label>Lettre de recommandation</label>
+                    <div class="file-upload-container">
+                      <input type="file" @change="e => handleMemberFile(membreId, 'lettre_cv_path', e)" class="form-input">
+                      <span v-if="memberDocuments[membreId]?.lettre_cv_path" class="file-name">
+                        {{ memberDocuments[membreId].lettre_cv_path.name }}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+                
+                <div v-else>
+                  <div class="form-group">
+                    <label>CV</label>
+                    <div class="file-upload-container">
+                      <input type="file" @change="e => handleMemberFile(membreId, 'cv', e)" class="form-input mb-2">
+                      <span v-if="memberDocuments[membreId]?.cv" class="file-name">
+                        {{ memberDocuments[membreId].cv.name }}
+                      </span>
+                    </div>
+                  </div>
+                  <div class="form-group">
+                    <label>Diplômes</label>
+                    <div class="file-upload-container">
+                      <input type="file" @change="e => handleMemberFile(membreId, 'diplomes', e)" class="form-input">
+                      <span v-if="memberDocuments[membreId]?.diplomes" class="file-name">
+                        {{ memberDocuments[membreId].diplomes.name }}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Étape 4 (confirmation) -->
+          <div v-if="step === 4" class="step-content">
+            <!-- Informations principales de la demande -->
+            <div class="confirmation-grid">
+              <div class="confirmation-item">
+                <h3>Détails du stage</h3>
+                <p><strong>Université :</strong> {{ form.universite }}</p>
+                <p><strong>Spécialité :</strong> {{ form.filiere }}</p>
+                <p><strong>Niveau d'étude :</strong> {{ form.niveau_etude }}</p>
+                <p><strong>Structure :</strong>
+                  {{ structures.find(s => s.id === form.structure_id)?.libelle }}
+                </p>
+                <p><strong>Période :</strong> {{ form.date_debut }} au {{ form.date_fin }}</p>
+                <p><strong>Type de demande :</strong> {{ form.type }}</p>
+                <p><strong>Nature :</strong> {{ form.nature }}</p>
+              </div>
+            </div>
+            
+            <!-- Informations des participants (demandeur principal et membres) -->
+            <div class="form-section mt-4">
+              <h3 class="section-title">Participants</h3>
+              
+              <!-- Demandeur principal -->
+              <div class="confirmation-item mb-4">
+                <h3 class="flex items-center">
+                  {{ form.nom }} {{ form.prenom }}
+                  <span class="tag-primary ml-2">Demandeur principal</span>
+                </h3>
+                <div class="participant-details">
+                  <div class="participant-info">
+                    <p><strong>Email :</strong> {{ form.email }}</p>
+                    <p><strong>Téléphone :</strong> {{ form.telephone }}</p>
+                  </div>
+                  <div class="participant-documents">
+                    <h4>Documents soumis</h4>
+                    <p v-if="form.lettre_cv_path">
+                      <strong>{{ form.type === 'Académique' ? 'Lettre de recommandation' : 'CV' }} :</strong> 
+                      {{ form.lettre_cv_path.name || 'Document téléchargé' }}
+                    </p>
+                    <p v-else class="text-yellow-600">Aucun document principal téléchargé</p>
+                  </div>
+                </div>
+              </div>
+              
+              <!-- Membres du groupe -->
+              <div v-if="form.nature === 'Groupe' && form.membres.length > 0">
+                <div v-for="memberId in form.membres" :key="memberId" class="confirmation-item mb-4">
+                  <h3>{{ getUserInfo(memberId).nom }} {{ getUserInfo(memberId).prenom }}</h3>
+                  <div class="participant-details">
+                    <div class="participant-info">
+                      <p><strong>Email :</strong> {{ getUserInfo(memberId).email }}</p>
+                      <p><strong>Téléphone :</strong> {{ getUserInfo(memberId).telephone }}</p>
+                    </div>
+                    <div class="participant-documents">
+                      <h4>Documents soumis</h4>
+                      <div v-if="memberDocuments[memberId]">
+                        <!-- Documents selon le type de demande -->
+                        <div v-if="form.type === 'Académique'">
+                          <p v-if="memberDocuments[memberId]['lettre_cv_path']">
+                            <strong>Lettre de recommandation :</strong> 
+                            {{ memberDocuments[memberId]['lettre_cv_path'].name }}
+                          </p>
+                          <p v-else class="text-yellow-600">Lettre de recommandation non fournie</p>
+                        </div>
+                        <div v-else>
+                          <p v-if="memberDocuments[memberId]['cv']">
+                            <strong>CV :</strong> {{ memberDocuments[memberId]['cv'].name }}
+                          </p>
+                          <p v-else class="text-yellow-600">CV non fourni</p>
+                          
+                          <p v-if="memberDocuments[memberId]['diplomes']">
+                            <strong>Diplômes :</strong> {{ memberDocuments[memberId]['diplomes'].name }}
+                          </p>
+                          <p v-else class="text-yellow-600">Diplômes non fournis</p>
+                        </div>
+                      </div>
+                      <div v-else>
+                        <p class="text-yellow-600">Aucun document soumis</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="modal-footer">
+            <button v-if="step > 1" @click="prevStep" class="btn-secondary">
+              Précédent
+            </button>
+            <button v-if="step < 4" @click="nextStep" :disabled="!validateStep()" class="btn-primary">
+              Suivant
+            </button>
+            <button v-if="step === 4" @click="submitRequest" :disabled="form.processing" class="btn-submit">
+              <span v-if="form.processing">Envoi en cours...</span>
+              <span v-else>Soumettre la demande</span>
+            </button>
+          </div>
         </div>
-    </Stagiaire>
+      </div>
+    </div>
+  </Stagiaire>
 </template>
+
+<style scoped>
+/* Styles de base */
+.btn-primary {
+  background-color: #3b82f6;
+  color: white;
+  padding: 0.5rem 1rem;
+  border-radius: 0.375rem;
+  font-weight: 600;
+  transition: background-color 0.2s;
+}
+
+.btn-primary:hover {
+  background-color: #2563eb;
+}
+
+.btn-primary:disabled {
+  background-color: #9ca3af;
+  cursor: not-allowed;
+}
+
+.btn-secondary {
+  background-color: #e5e7eb;
+  color: #4b5563;
+  padding: 0.5rem 1rem;
+  border-radius: 0.375rem;
+  font-weight: 600;
+  transition: background-color 0.2s;
+}
+
+.btn-secondary:hover {
+  background-color: #d1d5db;
+}
+
+.btn-submit {
+  background-color: #10b981;
+  color: white;
+  padding: 0.5rem 1rem;
+  border-radius: 0.375rem;
+  font-weight: 600;
+  transition: background-color 0.2s;
+}
+
+.btn-submit:hover {
+  background-color: #059669;
+}
+
+.flash-message {
+  padding: 0;
+  border-radius: 0.5rem;
+  margin-top: 1rem;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.flash-message-content {
+  display: flex;
+  align-items: flex-start;
+  padding: 1rem;
+}
+
+.flash-icon {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+  margin-right: 0.75rem;
+  margin-top: 0.25rem;
+}
+
+.flash-message-text {
+  flex-grow: 1;
+}
+
+.flash-close-btn {
+  background: none;
+  border: none;
+  font-size: 1.25rem;
+  line-height: 1;
+  color: currentColor;
+  opacity: 0.7;
+  cursor: pointer;
+  padding: 0 0.5rem;
+}
+
+.flash-close-btn:hover {
+  opacity: 1;
+}
+
+.flash-message.success {
+  background-color: #d1fae5;
+  color: #065f46;
+  border: 1px solid #a7f3d0;
+}
+
+.flash-message.error {
+  background-color: #fee2e2;
+  color: #b91c1c;
+  border: 1px solid #fecaca;
+}
+
+.flash-message.warning {
+  background-color: #fef3c7;
+  color: #92400e;
+  border: 1px solid #fde68a;
+}
+
+.code-suivi {
+  font-weight: bold;
+  padding: 0.25rem 0.5rem;
+  background-color: rgba(255, 255, 255, 0.5);
+  border-radius: 0.25rem;
+  font-family: monospace;
+  font-size: 1.1em;
+}
+
+.flash-link {
+  color: inherit;
+  text-decoration: underline;
+  font-weight: 600;
+}
+
+/* Modal styles */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 50;
+}
+
+.modal-container {
+  width: 95%;
+  max-width: 1100px;
+  margin: 0 1rem;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+.modal-content {
+  background-color: white;
+  border-radius: 0.5rem;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+}
+
+.modal-header {
+  padding: 1.5rem;
+  border-bottom: 1px solid #e5e7eb;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.modal-title {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #111827;
+}
+
+.close-btn {
+  font-size: 1.5rem;
+  color: #6b7280;
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+
+.close-btn:hover {
+  color: #4b5563;
+}
+
+/* Step indicator */
+.step-indicator {
+  display: flex;
+  justify-content: space-between;
+  padding: 1.5rem 1.5rem 0;
+  position: relative;
+}
+
+.step-indicator::before {
+  content: '';
+  position: absolute;
+  top: 20px;
+  left: 50px;
+  right: 50px;
+  height: 2px;
+  background-color: #e5e7eb;
+  z-index: 1;
+}
+
+.step-active,
+.step-inactive {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  z-index: 2;
+}
+
+.step-number {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+}
+
+.step-active .step-number {
+  background-color: #3b82f6;
+  color: white;
+}
+
+.step-inactive .step-number {
+  background-color: #e5e7eb;
+  color: #9ca3af;
+}
+
+.step-label {
+  font-size: 0.875rem;
+  color: #9ca3af;
+  font-weight: 500;
+}
+
+.step-active .step-label {
+  color: #111827;
+}
+
+/* Form styles */
+.step-content {
+  padding: 1.5rem;
+}
+
+.form-section {
+  margin-bottom: 1.5rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.form-section:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.section-title {
+  font-weight: 600;
+  color: #111827;
+  margin-bottom: 1rem;
+  font-size: 1.1rem;
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.form-group {
+  margin-bottom: 1rem;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-weight: 500;
+  color: #374151;
+}
+
+.form-group label.required::after {
+  content: ' *';
+  color: #ef4444;
+}
+
+.form-input {
+  width: 100%;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid #d1d5db;
+  border-radius: 0.375rem;
+  font-size: 1rem;
+}
+
+.form-input:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+}
+
+.error-msg {
+  color: #ef4444;
+  font-size: 0.875rem;
+  margin-top: 0.25rem;
+  display: block;
+}
+
+/* Confirmation step */
+.confirmation-grid {
+  display: grid;
+  gap: 1.5rem;
+}
+
+.confirmation-item {
+  background-color: #f9fafb;
+  padding: 1rem;
+  border-radius: 0.375rem;
+}
+
+.confirmation-item h3 {
+  font-weight: 600;
+  color: #111827;
+  margin-bottom: 0.75rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.confirmation-item p {
+  margin-bottom: 0.5rem;
+  color: #4b5563;
+}
+
+/* Footer */
+.modal-footer {
+  padding: 1.5rem;
+  border-top: 1px solid #e5e7eb;
+  display: flex;
+  justify-content: space-between;
+}
+
+/* Responsive */
+@media (max-width: 640px) {
+  .form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .step-indicator::before {
+    left: 30px;
+    right: 30px;
+  }
+}
+
+/* Nouveaux styles pour la recherche et la sélection des membres */
+.search-container {
+  margin-bottom: 0.5rem;
+}
+
+.members-select-container {
+  max-height: 200px;
+  overflow-y: auto;
+  border: 1px solid #d1d5db;
+  border-radius: 0.375rem;
+  padding: 0.5rem;
+}
+
+.member-option {
+  padding: 0.5rem;
+  display: flex;
+  align-items: center;
+  border-radius: 0.25rem;
+  transition: background-color 0.2s;
+}
+
+.member-option:hover {
+  background-color: #f3f4f6;
+}
+
+.member-option.selected {
+  background-color: #e5e7eb;
+}
+
+.member-option.disabled {
+  opacity: 0.7;
+  background-color: #f9fafb;
+}
+
+/* Styles pour les champs désactivés */
+.form-input:disabled {
+  background-color: #f3f4f6;
+  cursor: not-allowed;
+  opacity: 0.8;
+  color: #4b5563;
+}
+
+/* Styles pour les documents des membres */
+.membre-documents {
+  background-color: #f9fafb;
+  border-color: #e5e7eb;
+}
+
+/* Ajustements pour les colonnes */
+.col-span-2 {
+  grid-column: span 2 / span 2;
+}
+
+.mb-2 {
+  margin-bottom: 0.5rem;
+}
+
+.mb-3 {
+  margin-bottom: 0.75rem;
+}
+
+.mb-4 {
+  margin-bottom: 1rem;
+}
+
+.p-3 {
+  padding: 0.75rem;
+}
+
+.border {
+  border-width: 1px;
+}
+
+.rounded {
+  border-radius: 0.375rem;
+}
+
+.text-yellow-600 {
+  color: #d97706;
+}
+
+/* Mettre à jour les styles responsifs */
+@media (max-width: 768px) {
+  .modal-container {
+    width: 95%;
+    margin: 0 0.5rem;
+  }
+  
+  .form-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Styles pour l'étape 4 - Confirmation */
+.participant-details {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+  margin-top: 0.5rem;
+}
+
+.participant-info, .participant-documents {
+  background-color: #f9fafb;
+  padding: 0.75rem;
+  border-radius: 0.375rem;
+  border: 1px solid #e5e7eb;
+}
+
+.participant-documents h4 {
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+  color: #4b5563;
+}
+
+.tag-primary {
+  background-color: #3b82f6;
+  color: white;
+  font-size: 0.75rem;
+  padding: 0.2rem 0.5rem;
+  border-radius: 9999px;
+  font-weight: 500;
+}
+
+.status-pending {
+  color: #f59e0b;
+  font-size: 0.875rem;
+  font-style: italic;
+}
+
+.doc-list {
+  list-style: disc;
+  padding-left: 1.25rem;
+}
+
+.mt-4 {
+  margin-top: 1rem;
+}
+
+.flex {
+  display: flex;
+}
+
+.items-center {
+  align-items: center;
+}
+
+.ml-2 {
+  margin-left: 0.5rem;
+}
+
+/* Ajustements responsifs pour l'affichage de confirmation */
+@media (max-width: 768px) {
+  .participant-details {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Styles pour l'upload de fichiers */
+.file-upload-container {
+  position: relative;
+  width: 100%;
+}
+
+.file-name {
+  display: block;
+  margin-top: 0.5rem;
+  padding: 0.375rem 0.75rem;
+  background-color: #f0f9ff;
+  border: 1px solid #bae6fd;
+  border-radius: 0.375rem;
+  color: #0369a1;
+  font-size: 0.875rem;
+}
+
+/* Pour éviter que les inputs désactivés soient trop pâles */
+.form-input:disabled {
+  background-color: #f3f4f6;
+  cursor: not-allowed;
+  opacity: 0.8;
+  color: #4b5563;
+}
+
+.membre-info {
+  background-color: #f9fafb;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+</style>

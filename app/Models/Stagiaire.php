@@ -22,11 +22,6 @@ class Stagiaire extends Model
         'universite',
         'filiere',
     ];
-    public function getRouteKeyName()
-{
-    return 'id_stagiaire';
-}
-
 
     public function user(): BelongsTo
     {

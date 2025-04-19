@@ -4,11 +4,15 @@ namespace App\Http\Controllers;
 use App\Models\Structure;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
+use Illuminate\Support\Facades\Auth;
 
 class StructureController extends Controller
 {
     public function index()
     {
+        if (Auth::user()->role !== 'admin') {
+            return redirect()->route('dashboard')->with('error', 'Accès non autorisé.');
+        }
         $structures = Structure::select('id', 'sigle', 'libelle', 'description')->get();
 
         return Inertia::render('Structures/Index', [

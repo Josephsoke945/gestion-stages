@@ -16,15 +16,6 @@
           </button>
         </div>
 
-        <!-- Flash message si nécessaire -->
-        <div v-if="flash" class="p-4 bg-green-100 border-l-4 border-green-500 text-green-700 rounded shadow-sm flex items-center">
-          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mr-3">
-            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
-            <polyline points="22 4 12 14.01 9 11.01"/>
-          </svg>
-          <span>{{ flash }}</span>
-        </div>
-
         <!-- Liste des stagiaires avec état vide -->
         <div class="bg-white rounded-lg shadow-md overflow-hidden">
           <div class="p-6 border-b border-gray-200">
@@ -282,27 +273,62 @@
             </form>
           </div>
         </div>
+        
+        <!-- Composant Toast pour les notifications -->
+        <Toast ref="toast" />
       </div>
     </div>
   </SimpleLayout>
 </template>
 
 <script setup>
-import { ref, watch } from 'vue';
+import { ref, watch, onMounted } from 'vue';
 import { router, usePage } from '@inertiajs/vue3';
 import SimpleLayout from '@/Layouts/SimpleLayout.vue';
+import Toast from '@/Components/Toast.vue'; // Importez le nouveau composant
 
 const props = defineProps({
   stagiaires: Array
 });
 
-// Gestion du flash message Inertia
 const page = usePage();
-const flash = ref(page.props.flash?.success || '');
+const toast = ref(null); // Référence au composant Toast
+
+// Surveiller les changements dans les messages flash
 watch(() => page.props.flash, (newVal) => {
-  flash.value = newVal?.success || '';
-  if (flash.value) {
-    setTimeout(() => (flash.value = ''), 4000);
+  if (newVal?.success && toast.value) {
+    toast.value.addToast({
+      type: 'success',
+      title: 'Succès',
+      message: newVal.success
+    });
+  }
+  
+  if (newVal?.error && toast.value) {
+    toast.value.addToast({
+      type: 'error',
+      title: 'Erreur',
+      message: newVal.error
+    });
+  }
+}, { deep: true });
+
+// Vérifier s'il y a des messages flash au chargement
+onMounted(() => {
+  if (page.props.flash?.success && toast.value) {
+    toast.value.addToast({
+      type: 'success',
+      title: 'Succès',
+      message: page.props.flash.success
+    });
+  }
+  
+  if (page.props.flash?.error && toast.value) {
+    toast.value.addToast({
+      type: 'error',
+      title: 'Erreur',
+      message: page.props.flash.error
+    });
   }
 });
 
@@ -364,10 +390,18 @@ const submit = () => {
       onSuccess: () => {
         closeModal();
         processing.value = false;
+        // Les messages sont gérés par le système de toast via watch
       },
       onError: (errors) => {
         console.log(errors);
         processing.value = false;
+        if (toast.value) {
+          toast.value.addToast({
+            type: 'error',
+            title: 'Erreur de validation',
+            message: 'Veuillez vérifier les informations saisies'
+          });
+        }
       }
     });
   } else {
@@ -375,10 +409,18 @@ const submit = () => {
       onSuccess: () => {
         closeModal();
         processing.value = false;
+        // Les messages sont gérés par le système de toast via watch
       },
       onError: (errors) => {
         console.log(errors);
         processing.value = false;
+        if (toast.value) {
+          toast.value.addToast({
+            type: 'error',
+            title: 'Erreur de validation',
+            message: 'Veuillez vérifier les informations saisies'
+          });
+        }
       }
     });
   }
@@ -386,7 +428,20 @@ const submit = () => {
 
 const deleteStagiaire = (id) => {
   if (confirm('Voulez-vous vraiment supprimer ce stagiaire ?')) {
-    router.delete(`/stagiaires/${id}`);
+    router.delete(`/stagiaires/${id}`, {
+      onSuccess: () => {
+        // Les messages sont gérés par le système de toast via watch
+      },
+      onError: () => {
+        if (toast.value) {
+          toast.value.addToast({
+            type: 'error',
+            title: 'Erreur de suppression',
+            message: 'Impossible de supprimer ce stagiaire'
+          });
+        }
+      }
+    });
   }
 };
 </script>

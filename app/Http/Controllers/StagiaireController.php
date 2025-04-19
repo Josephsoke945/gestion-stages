@@ -6,14 +6,17 @@ use App\Models\Stagiaire;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
+use Illuminate\Support\Facades\Auth;
 
 class StagiaireController extends Controller
 {
     public function index()
     { 
+        if (Auth::user()->role !== 'admin') {
+            return redirect()->route('dashboard')->with('error', 'Accès non autorisé. Vous devez être administrateur pour accéder à cette page.');
+        }
         // Récupérer tous les stagiaires avec la relation user
         // et filtrer ceux dont le rôle est "stagiaire"
-        // Utiliser whereHas pour filtrer les stagiaires ayant un utilisateur avec le rôle "stagiaire"
         $stagiaires = Stagiaire::with('user')
             ->whereHas('user', function ($query) {
                 $query->where('role', 'stagiaire');
@@ -58,7 +61,7 @@ class StagiaireController extends Controller
             'filiere' => $data['filiere'],
         ]);
 
-        return redirect()->route('stagiaires.index')->with('success', 'Stagiaire ajouté avec succès.');
+        return redirect()->route('stagiaires.index')->with('success', "Le stagiaire {$data['prenom']} {$data['nom']} a été ajouté avec succès !");
     }
 
     public function update(Request $request, Stagiaire $stagiaire)
@@ -68,7 +71,6 @@ class StagiaireController extends Controller
             'prenom' => 'required|string|max:255',
             'email' => 'required|email|unique:users,email,' . $stagiaire->user_id,
             'telephone' => 'required|integer',
-            // 'telephone' => 'required|string',
             'date_de_naissance' => 'required|date',
             'sexe' => 'required|string',
             'niveau_etude' => 'required|string',
@@ -106,13 +108,17 @@ class StagiaireController extends Controller
             'filiere' => $data['filiere'],
         ]);
 
-        return redirect()->route('stagiaires.index')->with('success', 'Stagiaire mis à jour.');
+        return redirect()->route('stagiaires.index')->with('success', "Les informations de {$data['prenom']} {$data['nom']} ont été mises à jour avec succès !");
     }
 
     public function destroy(Stagiaire $stagiaire)
     {
+        $nom = $stagiaire->user->nom;
+        $prenom = $stagiaire->user->prenom;
+        
         $stagiaire->user()->delete();
         $stagiaire->delete();
-        return redirect()->route('stagiaires.index')->with('success', 'Stagiaire supprimé.');
+        
+        return redirect()->route('stagiaires.index')->with('success', "Le stagiaire {$prenom} {$nom} a été supprimé avec succès !");
     }
 }

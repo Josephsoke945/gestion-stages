@@ -4,6 +4,7 @@ namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
@@ -63,4 +64,14 @@ public function isStagiaire()
 {
     return $this->role === 'stagiaire';
 }
+public function stagiaire()
+{
+    return $this->hasOne(Stagiaire::class);
+}
+
+public function membreGroupes()
+{
+    return $this->hasMany(MembreGroupe::class);
+}
+
 }
