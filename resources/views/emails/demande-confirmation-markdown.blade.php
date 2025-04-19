@@ -28,6 +28,6 @@ Consulter mes demandes
 
 Si vous avez des questions concernant votre demande, n'hésitez pas à nous contacter.
 
-Cordialement,  
+Cordialement ,  
 L'équipe de Gestion des Stages
 @endcomponent 
