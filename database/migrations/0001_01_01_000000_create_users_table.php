@@ -6,32 +6,25 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-    /**
-     * Run the migrations.
-     */
-    public function up(): void
+    public function up()
     {
         Schema::create('users', function (Blueprint $table) {
             $table->id();
             $table->string('nom');
-            $table->string('prenom')->nullable();
-            $table->date('date_de_naissance')->nullable();
-            $table->enum('sexe', ['Homme', 'Femme'])->nullable();
-            $table->string('adresse')->nullable();
-            $table->string('email')->unique(); // L'email est requis par défaut dans Laravel
-            $table->string('password'); // Le mot de passe est requis par défaut dans Laravel
+            $table->string('prenom');
+            $table->string('email')->unique();
+            $table->timestamp('email_verified_at')->nullable();
+            $table->string('password');
             $table->string('telephone')->nullable();
-            $table->date('date_d_inscription')->nullable();
-            $table->string('role', 255)->default('stagiaire'); // Modification ici : string avec longueur 255
+            $table->string('adresse')->nullable();
+            $table->string('role')->default('stagiaire'); // admin, stagiaire, agent
+            $table->string('photo_profil')->nullable();
             $table->rememberToken();
             $table->timestamps();
         });
     }
 
-    /**
-     * Reverse the migrations.
-     */
-    public function down(): void
+    public function down()
     {
         Schema::dropIfExists('users');
     }

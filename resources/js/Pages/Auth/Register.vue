@@ -7,7 +7,10 @@ import TextInput from '@/Components/TextInput.vue';
 import { Head, Link, useForm } from '@inertiajs/vue3';
 
 const form = useForm({
-    name: '',
+    nom: '',           // Ajout du champ nom
+    prenom: '',        // Ajout du champ prenom
+    telephone: '',     // Ajout du champ telephone
+    adresse: '',       // Ajout du champ adresse
     email: '',
     password: '',
     password_confirmation: '',
@@ -26,24 +29,34 @@ const submit = () => {
 
         <form @submit.prevent="submit">
             <div>
-                <InputLabel for="name" value="Name" />
-
+                <InputLabel for="nom" value="Nom" />
                 <TextInput
-                    id="name"
+                    id="nom"
                     type="text"
                     class="mt-1 block w-full"
-                    v-model="form.name"
+                    v-model="form.nom"
                     required
                     autofocus
-                    autocomplete="name"
+                    autocomplete="nom"
                 />
+                <InputError class="mt-2" :message="form.errors.nom" />
+            </div>
 
-                <InputError class="mt-2" :message="form.errors.name" />
+            <div class="mt-4">
+                <InputLabel for="prenom" value="Prénom" />
+                <TextInput
+                    id="prenom"
+                    type="text"
+                    class="mt-1 block w-full"
+                    v-model="form.prenom"
+                    required
+                    autocomplete="prenom"
+                />
+                <InputError class="mt-2" :message="form.errors.prenom" />
             </div>
 
             <div class="mt-4">
                 <InputLabel for="email" value="Email" />
-
                 <TextInput
                     id="email"
                     type="email"
@@ -52,13 +65,11 @@ const submit = () => {
                     required
                     autocomplete="username"
                 />
-
                 <InputError class="mt-2" :message="form.errors.email" />
             </div>
 
             <div class="mt-4">
                 <InputLabel for="password" value="Password" />
-
                 <TextInput
                     id="password"
                     type="password"
@@ -67,7 +78,6 @@ const submit = () => {
                     required
                     autocomplete="new-password"
                 />
-
                 <InputError class="mt-2" :message="form.errors.password" />
             </div>
 
@@ -76,7 +86,6 @@ const submit = () => {
                     for="password_confirmation"
                     value="Confirm Password"
                 />
-
                 <TextInput
                     id="password_confirmation"
                     type="password"
@@ -85,11 +94,34 @@ const submit = () => {
                     required
                     autocomplete="new-password"
                 />
-
                 <InputError
                     class="mt-2"
                     :message="form.errors.password_confirmation"
                 />
+            </div>
+
+            <div class="mt-4">
+                <InputLabel for="telephone" value="Téléphone" />
+                <TextInput
+                    id="telephone"
+                    type="text"
+                    class="mt-1 block w-full"
+                    v-model="form.telephone"
+                    autocomplete="tel"
+                />
+                <InputError class="mt-2" :message="form.errors.telephone" />
+            </div>
+
+            <div class="mt-4">
+                <InputLabel for="adresse" value="Adresse" />
+                <TextInput
+                    id="adresse"
+                    type="text"
+                    class="mt-1 block w-full"
+                    v-model="form.adresse"
+                    autocomplete="address-level1"
+                />
+                <InputError class="mt-2" :message="form.errors.adresse" />
             </div>
 
             <div class="mt-4 flex items-center justify-end">

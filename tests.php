@@ -83,3 +83,4 @@ if ($user) {
 } else {
     echo "Utilisateur avec ID 1 non trouvé.\n";
   }
+

@@ -4,7 +4,6 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Notification extends Model
 {
@@ -12,22 +11,21 @@ class Notification extends Model
 
     protected $fillable = [
         'user_id',
-        'message',
-        'date_envoi',
-        'statut',
+        'type',
+        'contenu',
+        'lien',
+        'est_lu',
+        'date_lecture',
     ];
 
     protected $casts = [
-        'date_envoi' => 'datetime',
+        'est_lu' => 'boolean',
+        'date_lecture' => 'datetime',
     ];
 
-    /**
-     * Get the user that the notification belongs to.
-     */
-    public function user(): BelongsTo
+    // Relations
+    public function user()
     {
         return $this->belongsTo(User::class);
     }
-
-    // Définir d'autres relations Eloquent ici ultérieurement
 }

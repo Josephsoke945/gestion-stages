@@ -27,7 +27,6 @@ class DatabaseSeeder extends Seeder
             StructureSeeder::class,
             UniversiteSeeder::class, // Les universités doivent être créées avant les stagiaires
             StagiaireSeeder::class, // Les stagiaires doivent être créés en premier
-            StagiaireUserSeeder::class, // Lie les stagiaires aux utilisateurs après la création des stagiaires
             DemandeStageSeeder::class, // Les demandes de stage viennent après les stagiaires et les structures
             ThemeStageSeeder::class,
             StageSeeder::class,

@@ -1,49 +1,65 @@
 <?php
 
+
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\HasMany; // N'oubliez pas d'importer HasMany
 
 class Stagiaire extends Model
 {
     use HasFactory;
 
-    protected $primaryKey = 'id';
-    public $incrementing = true;
-    protected $keyType = 'int'; // ou 'bigint' si vous préférez être explicite
-
     protected $fillable = [
         'user_id',
+        'structure_universite_id',
         'niveau_etude',
-        'universite_id',
+        'diplome',
+        'competences',
+        'demande_stage_id',
+        'est_demandeur',
     ];
 
-    /**
-     * Get the user that owns the Stagiaire.
-     */
-    public function user(): BelongsTo
+    // Relations
+    public function user()
     {
         return $this->belongsTo(User::class);
     }
 
-    /**
-     * Get the universite that the Stagiaire belongs to.
-     */
-    public function universite(): BelongsTo
+    public function universite()
     {
-        return $this->belongsTo(Universite::class);
+        return $this->belongsTo(Structure::class, 'structure_universite_id');
     }
 
-    /**
-     * Get all of the demandeStages for the Stagiaire.
-     */
-    public function demandesStages(): HasMany
+    public function demandeStage()
     {
-        return $this->hasMany(DemandeStage::class, 'stagiaire_id', 'id');
+        return $this->belongsTo(DemandeStage::class);
     }
 
-    // Définir d'autres relations Eloquent ici ultérieurement
+    public function demandesInitiees()
+    {
+        return $this->hasMany(DemandeStage::class, 'stagiaire_demandeur_id');
+    }
+
+    public function evaluations()
+    {
+        return $this->hasMany(Evaluation::class);
+    }
+
+    public function attestations()
+    {
+        return $this->hasMany(Attestation::class);
+    }
+
+    public function themesProposés()
+    {
+        return $this->hasMany(Theme::class, 'propose_par_stagiaire_id');
+    }
+
+    // Relation pour récupérer les membres de l'équipe
+    public function equipe()
+    {
+        return $this->hasMany(Stagiaire::class, 'demande_stage_id', 'demande_stage_id')
+            ->where('id', '!=', $this->id);
+    }
 }

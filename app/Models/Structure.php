@@ -4,8 +4,6 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Structure extends Model
 {
@@ -13,33 +11,43 @@ class Structure extends Model
 
     protected $fillable = [
         'nom',
-        'responsable_id',
+        'adresse',
+        'telephone',
+        'email',
+        'type',
         'description',
+        'est_dpaf',
+        'structure_parent_id',
     ];
 
-    /**
-     * Get the responsable of the structure.
-     */
-    public function responsable(): BelongsTo
+    // Relations
+    public function structureParent()
     {
-        return $this->belongsTo(User::class, 'responsable_id'); // Spécifie la clé étrangère
+        return $this->belongsTo(Structure::class, 'structure_parent_id');
     }
 
-    /**
-     * Get all the stages that belong to this structure.
-     */
-    public function stages(): HasMany
+    public function sousServices()
     {
-        return $this->hasMany(Stage::class);
+        return $this->hasMany(Structure::class, 'structure_parent_id');
     }
 
-    /**
-     * Get all the demande attestation that are directed to this structure (if specified).
-     */
-    public function demandesAttestation(): HasMany
+    public function agents()
     {
-        return $this->hasMany(DemandeAttestation::class); // Assurez-vous que la clé étrangère 'structure_id' existe dans DemandeAttestation si nécessaire
+        return $this->hasMany(Agent::class);
     }
 
-    // Définir d'autres relations Eloquent ici ultérieurement
+    public function demandesStage()
+    {
+        return $this->hasMany(DemandeStage::class);
+    }
+
+    public function stagiaires()
+    {
+        return $this->hasMany(Stagiaire::class, 'structure_universite_id');
+    }
+
+    public function themes()
+    {
+        return $this->hasMany(Theme::class);
+    }
 }

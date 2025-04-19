@@ -4,55 +4,66 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class DemandeStage extends Model
 {
     use HasFactory;
 
     protected $fillable = [
-        'stagiaire_id',
+        'code_suivi',
+        'stagiaire_demandeur_id',
         'structure_id',
-        'nature', // Ajout de 'nature' aux fillable
+        'type_stage',
+        'nature_stage',
+        'date_debut_souhaitee',
+        'date_fin_souhaitee',
+        'niveau_etude',
+        'cv',
+        'lettre_motivation',
+        'lettre_recommandation',
+        'diplomes_attestations',
         'statut',
-        'date_soumission',
-        'structure_souhaitee',
+        'motif_refus',
     ];
 
     protected $casts = [
-        'date_soumission' => 'date',
+        'date_debut_souhaitee' => 'date',
+        'date_fin_souhaitee' => 'date',
     ];
 
-    /**
-     * Get the stagiaire that made the demande.
-     */
-    public function stagiaire(): BelongsTo
+    // Relations
+    public function stagiaireDemandeur()
     {
-        return $this->belongsTo(Stagiaire::class);
+        return $this->belongsTo(Stagiaire::class, 'stagiaire_demandeur_id');
     }
 
-    /**
-     * Get the structure for this demande.
-     */
-    public function structure(): BelongsTo
+    public function structure()
     {
         return $this->belongsTo(Structure::class);
     }
 
-    // Suppression de la relation vers NatureDemande
-    // public function natureDemande(): BelongsTo
-    // {
-    //     return $this->belongsTo(NatureDemande::class);
-    // }
+    public function stagiaires()
+    {
+        return $this->hasMany(Stagiaire::class);
+    }
 
-    /**
-     * Get the stage created from this demande (if accepted).
-     */
-    public function stage(): HasOne
+    public function affectationDemande()
+    {
+        return $this->hasOne(AffectationDemande::class);
+    }
+
+    public function stage()
     {
         return $this->hasOne(Stage::class);
     }
 
-    // Définir d'autres relations Eloquent ici ultérieurement
+    // Boot method pour générer le code de suivi automatiquement
+    protected static function boot()
+    {
+        parent::boot();
+        
+        static::creating(function ($demande) {
+            $demande->code_suivi = 'DEM-' . time() . '-' . rand(1000, 9999);
+        });
+    }
 }
