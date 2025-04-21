@@ -19,19 +19,6 @@
           </button>
         </div>
 
-        <!-- Flash message si nécessaire -->
-        <div v-if="$page.props.flash && $page.props.flash.success" class="p-4 bg-green-100 border-l-4 border-green-500 text-green-700 rounded shadow-sm flex items-center">
-          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mr-3">
-            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
-            <polyline points="22 4 12 14.01 9 11.01"/>
-          </svg>
-          <span>{{ $page.props.flash.success }}</span>
-        </div>
-
-        <div v-if="$page.props.flash && $page.props.flash.error" class="p-4 bg-red-100 border-l-4 border-red-500 text-red-700 rounded shadow-sm">
-          {{ $page.props.flash.error }}
-        </div>
-
         <!-- Liste des utilisateurs -->
         <div class="bg-white rounded-lg shadow-md overflow-hidden">
           <div class="px-6 py-4 border-b border-gray-200">
@@ -82,25 +69,30 @@
                   </td>
                   <td class="px-6 py-4 border-b border-gray-200">
                     <div class="flex justify-center space-x-3">
+                      <!-- Modifier -->
                       <button 
                         @click="openModal(user)" 
-                        class="text-blue-600 hover:text-blue-800 font-medium flex items-center gap-1"
+                        class="text-blue-600 hover:text-blue-800 font-medium flex items-center"
+                        title="Modifier"
                       >
-                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" viewBox="0 0 24 24" fill="none"
+                          stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                           <path d="M17 3a2.85 2.85 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/>
                         </svg>
-                        Modifier
                       </button>
+
+                      <!-- Supprimer -->
                       <button 
-                        @click="deleteUser(user.id)" 
-                        class="text-red-600 hover:text-red-800 font-medium flex items-center gap-1"
+                        @click="openDeleteModal(user)" 
+                        class="text-red-600 hover:text-red-800 font-medium flex items-center"
+                        title="Supprimer"
                       >
-                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" viewBox="0 0 24 24" fill="none"
+                          stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                           <path d="M3 6h18"/>
                           <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/>
                           <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/>
                         </svg>
-                        Supprimer
                       </button>
                     </div>
                   </td>
@@ -216,22 +208,97 @@
             </form>
           </div>
         </div>
+        
+        <!-- Modal de confirmation de suppression -->
+        <div v-if="showDeleteModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div class="bg-white rounded-lg shadow-xl max-w-md w-full mx-4 overflow-hidden">
+            <div class="px-6 py-4 bg-red-50 border-b border-red-100">
+              <div class="flex items-center">
+                <div class="flex-shrink-0 bg-red-100 rounded-full p-2 mr-3">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                  </svg>
+                </div>
+                <h3 class="text-lg font-medium text-red-800">Supprimer l'utilisateur</h3>
+              </div>
+            </div>
+            
+            <div class="px-6 py-4">
+              <p class="text-gray-700 mb-4">
+                Voulez-vous vraiment supprimer l'utilisateur "{{ userToDelete?.nom || '' }}" ?<br>
+                <span class="text-sm text-gray-500">Email : {{ userToDelete?.email || '' }}</span><br>
+                <span class="text-sm text-gray-500">Rôle : {{ userToDelete?.role || '' }}</span><br>
+                Cette action est irréversible.
+              </p>
+              
+              <div class="flex justify-end space-x-3">
+                <button 
+                  @click="closeDeleteModal" 
+                  class="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
+                >
+                  Annuler
+                </button>
+                <button 
+                  @click="confirmDelete" 
+                  class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+                >
+                  Supprimer
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Ajout du composant AdminToast -->
+        <AdminToast ref="toast" />
       </div>
     </div>
   </SimpleLayout>
 </template>
 
 <script setup>
-import { ref } from 'vue';
-import { Head, useForm, router } from '@inertiajs/vue3';
+import { ref, onMounted } from 'vue';
+import { Head, useForm, router, usePage } from '@inertiajs/vue3';
 import SimpleLayout from '@/Layouts/SimpleLayout.vue';
+import AdminToast from '@/Components/AdminToast.vue';
 
 const props = defineProps({
   users: Array,
 });
 
+const page = usePage();
+const toast = ref(null);
 const showModal = ref(false);
 const editingId = ref(null);
+
+// Variables pour la confirmation de suppression
+const showDeleteModal = ref(false);
+const userToDelete = ref(null);
+
+// Surveiller les messages flash et les afficher automatiquement
+onMounted(() => {
+  // Vérifier si des messages flash existent au chargement
+  setTimeout(() => {
+    const { flash } = page.props;
+    if (flash) {
+      if (flash.success && toast.value) {
+        toast.value.addToast({
+          type: 'success',
+          title: 'Succès',
+          message: flash.success
+        });
+      }
+      
+      if (flash.error && toast.value) {
+        toast.value.addToast({
+          type: 'error',
+          title: 'Erreur',
+          message: flash.error
+        });
+      }
+    }
+  }, 100);
+});
 
 // Formulaire pour les données utilisateur
 const form = useForm({
@@ -265,23 +332,97 @@ function closeModal() {
   editingId.value = null;
 }
 
+// Fonctions pour le modal de confirmation de suppression
+function openDeleteModal(user) {
+  userToDelete.value = user;
+  showDeleteModal.value = true;
+}
+
+function closeDeleteModal() {
+  showDeleteModal.value = false;
+  userToDelete.value = null;
+}
+
+function confirmDelete() {
+  if (!userToDelete.value) return;
+  
+  deleteUser(userToDelete.value.id);
+  closeDeleteModal();
+}
+
 function submitForm() {
   if (editingId.value) {
     // Mise à jour d'un utilisateur existant
     form.put(route('users.update', editingId.value), {
-      onSuccess: () => closeModal(),
+      onSuccess: () => {
+        closeModal();
+        if (toast.value) {
+          toast.value.addToast({
+            type: 'success',
+            title: 'Utilisateur modifié',
+            message: `L'utilisateur "${form.nom}" (${form.email}) avec le rôle "${form.role}" a été mis à jour avec succès.`
+          });
+        }
+      },
+      onError: () => {
+        if (toast.value) {
+          toast.value.addToast({
+            type: 'error',
+            title: 'Erreur de validation',
+            message: 'Veuillez vérifier les informations saisies'
+          });
+        }
+      }
     });
   } else {
     // Création d'un nouvel utilisateur
     form.post(route('users.store'), {
-      onSuccess: () => closeModal(),
+      onSuccess: () => {
+        closeModal();
+        if (toast.value) {
+          toast.value.addToast({
+            type: 'success',
+            title: 'Utilisateur ajouté',
+            message: `L'utilisateur "${form.nom}" (${form.email}) avec le rôle "${form.role}" a été ajouté avec succès.`
+          });
+        }
+      },
+      onError: () => {
+        if (toast.value) {
+          toast.value.addToast({
+            type: 'error',
+            title: 'Erreur de validation',
+            message: 'Veuillez vérifier les informations saisies'
+          });
+        }
+      }
     });
   }
 }
 
 function deleteUser(id) {
-  if (confirm('Voulez-vous vraiment supprimer cet utilisateur ?')) {
-    router.delete(route('users.destroy', id));
-  }
+  // Trouver l'utilisateur pour afficher son nom dans le message de confirmation
+  const user = props.users.find(u => u.id === id);
+  
+  router.delete(route('users.destroy', id), {
+    onSuccess: () => {
+      if (toast.value) {
+        toast.value.addToast({
+          type: 'success',
+          title: 'Utilisateur supprimé',
+          message: `L'utilisateur "${user?.nom || ''}" (${user?.email || ''}) avec le rôle "${user?.role || ''}" a été supprimé avec succès.`
+        });
+      }
+    },
+    onError: () => {
+      if (toast.value) {
+        toast.value.addToast({
+          type: 'error',
+          title: 'Erreur de suppression',
+          message: 'Impossible de supprimer cet utilisateur'
+        });
+      }
+    }
+  });
 }
 </script>

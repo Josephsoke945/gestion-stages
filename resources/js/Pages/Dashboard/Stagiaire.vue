@@ -5,12 +5,36 @@ import Stagiaire from '@/Layouts/Stagiaire.vue';
 
 const props = defineProps(['auth', 'structures', 'users']);
 const showModal = ref(false);
-const flashMessage = ref('');
-const flashType = ref(''); // 'success', 'error', ou 'warning'
 const codeSuivi = ref('');
 const step = ref(1);
 const searchQuery = ref(''); // Pour la recherche de membres
 const documentsRequired = ref([]); // Pour stocker les documents requis selon le type
+
+// Système de toast
+const toasts = ref([]);
+let toastCounter = 0;
+
+// Fonction pour ajouter un toast
+const addToast = ({ type = 'info', title = '', message = '', duration = 5000 }) => {
+  const id = toastCounter++;
+  
+  toasts.value.push({
+    id,
+    type,
+    title,
+    message,
+    timeout: setTimeout(() => removeToast(id), duration)
+  });
+};
+
+// Fonction pour retirer un toast
+const removeToast = (id) => {
+  const index = toasts.value.findIndex(toast => toast.id === id);
+  if (index !== -1) {
+    clearTimeout(toasts.value[index].timeout);
+    toasts.value.splice(index, 1);
+  }
+};
 
 // Structure pour stocker les documents soumis par membre
 const memberDocuments = reactive({});
@@ -63,6 +87,20 @@ const handleMemberFile = (memberId, fileType, event) => {
   }
   
   memberDocuments[memberId][fileType] = file;
+  
+  // Notifications pour les documents téléchargés
+  const memberName = getUserInfo(memberId).nom + ' ' + getUserInfo(memberId).prenom;
+  const documentType = fileType === 'lettre_cv_path' 
+    ? 'Lettre de recommandation' 
+    : (fileType === 'cv' ? 'CV' : 'Diplômes');
+  
+  addToast({
+    type: 'success',
+    title: 'Document téléchargé',
+    message: `${documentType} de ${memberName} ajouté avec succès`,
+    duration: 3000
+  });
+  
   console.log('Document ajouté pour membre', memberId, fileType, file.name);
 };
 
@@ -155,8 +193,8 @@ const validateStep = () => {
       form.date_debut && form.date_fin && form.structure_id && isDateValid.value;
   }
   if (step.value === 3) {
-    // Validation des documents selon le type de demande
-    // Ici on pourrait ajouter une validation plus stricte si nécessaire
+    // Pour l'étape 3, on avertit simplement mais on permet de continuer
+    checkMemberDocuments();
     return true;
   }
   return true;
@@ -165,20 +203,140 @@ const validateStep = () => {
 // Navigation
 const nextStep = () => {
   if (!validateStep()) {
-    flashMessage.value = "Veuillez remplir tous les champs obligatoires";
+    let errorMessage = '';
+    
+    if (step.value === 1) {
+      if (form.nature === 'Groupe' && (!form.membres || form.membres.length === 0)) {
+        errorMessage = "Veuillez sélectionner au moins un membre pour le groupe";
+      } else {
+        errorMessage = "Veuillez remplir tous les champs obligatoires";
+      }
+    } else if (step.value === 2) {
+      if (!form.universite) errorMessage = "Le champ Université est obligatoire";
+      else if (!form.filiere) errorMessage = "Le champ Spécialité est obligatoire";
+      else if (!form.niveau_etude) errorMessage = "Le champ Niveau d'étude est obligatoire";
+      else if (!form.date_debut) errorMessage = "Le champ Date de début est obligatoire";
+      else if (!form.date_fin) errorMessage = "Le champ Date de fin est obligatoire";
+      else if (!form.structure_id) errorMessage = "Veuillez sélectionner une structure";
+      else if (!isDateValid.value) errorMessage = "La date de fin doit être après la date de début";
+    }
+    
+    addToast({
+      type: 'error',
+      title: 'Champs obligatoires',
+      message: errorMessage
+    });
+    
     return;
   }
+  
+  // Si les étapes sont valides, on peut afficher un message de progression
+  if (step.value === 1) {
+    addToast({
+      type: 'info',
+      title: 'Informations validées',
+      message: 'Passons aux détails du stage',
+      duration: 3000
+    });
+  } else if (step.value === 2) {
+    addToast({
+      type: 'info',
+      title: 'Détails validés',
+      message: 'Veuillez maintenant fournir les documents nécessaires',
+      duration: 3000
+    });
+  } else if (step.value === 3) {
+    addToast({
+      type: 'info',
+      title: 'Documents enregistrés',
+      message: 'Vérifiez les informations avant la soumission finale',
+      duration: 3000
+    });
+  }
+  
   step.value++;
-  flashMessage.value = '';
 };
 
 const prevStep = () => {
   step.value--;
-  flashMessage.value = '';
 };
+
+// Fonction pour vérifier si les membres ont soumis les documents requis à l'étape 3
+const checkMemberDocuments = () => {
+  if (form.nature !== 'Groupe' || form.membres.length === 0) return true;
+  
+  let allDocumentsSubmitted = true;
+  const missingDocuments = [];
+  
+  form.membres.forEach(memberId => {
+    const member = getUserInfo(memberId);
+    if (!memberDocuments[memberId] || !Object.keys(memberDocuments[memberId]).length) {
+      allDocumentsSubmitted = false;
+      missingDocuments.push(`${member.nom} ${member.prenom}`);
+    }
+  });
+  
+  if (!allDocumentsSubmitted) {
+    addToast({
+      type: 'warning',
+      title: 'Documents manquants',
+      message: `Les membres suivants n'ont pas fourni de documents : <br>${missingDocuments.join(', ')}`,
+      duration: 6000
+    });
+  }
+  
+  return allDocumentsSubmitted;
+};
+
+// Surveillons les changements des membres pour afficher des notifications
+watch(() => form.membres, (newMembers, oldMembers) => {
+  if (oldMembers && newMembers.length > oldMembers.length) {
+    // Un membre a été ajouté
+    const newMemberId = newMembers.find(id => !oldMembers.includes(id));
+    if (newMemberId) {
+      const member = getUserInfo(newMemberId);
+      addToast({
+        type: 'success',
+        title: 'Membre ajouté',
+        message: `${member.nom} ${member.prenom} a été ajouté au groupe`,
+        duration: 3000
+      });
+    }
+  } else if (oldMembers && newMembers.length < oldMembers.length) {
+    // Un membre a été retiré
+    const removedMemberId = oldMembers.find(id => !newMembers.includes(id));
+    if (removedMemberId) {
+      const member = getUserInfo(removedMemberId);
+      addToast({
+        type: 'info',
+        title: 'Membre retiré',
+        message: `${member.nom} ${member.prenom} a été retiré du groupe`,
+        duration: 3000
+      });
+      
+      // Nettoyer les documents du membre supprimé
+      if (memberDocuments[removedMemberId]) {
+        delete memberDocuments[removedMemberId];
+      }
+    }
+  }
+}, { deep: true });
 
 // Soumission
 const submitRequest = () => {
+  // Vérifier la validité du formulaire avant soumission
+  if (!validateForm()) {
+    return;
+  }
+  
+  // Informer l'utilisateur que la soumission est en cours
+  addToast({
+    type: 'info',
+    title: 'Soumission en cours',
+    message: 'Veuillez patienter pendant l\'envoi de votre demande...',
+    duration: 10000
+  });
+  
   // Préparation des données pour inclure les documents des membres
   const formData = new FormData();
   
@@ -231,16 +389,20 @@ const submitRequest = () => {
       
       // Si un code a été trouvé, afficher un message de succès
       if (codeFound) {
-        showFlashMessage(
-          `<strong>Demande soumise avec succès !</strong><br>Votre code de suivi est : <span class="code-suivi">${codeSuivi.value}</span><br>Conservez-le précieusement pour suivre l'état de votre demande.`, 
-          'success'
-        );
+        addToast({
+          type: 'success',
+          title: 'Demande soumise avec succès',
+          message: `Votre code de suivi est : <span class="code-suivi">${codeSuivi.value}</span><br>Conservez-le précieusement pour suivre l'état de votre demande.`,
+          duration: 8000
+        });
       } else {
         // Sinon, montrer un message générique
-        showFlashMessage(
-          `<strong>Demande soumise avec succès !</strong><br>Vous pouvez consulter vos demandes dans la section <a href="${route('mes.demandes')}" class="flash-link">Mes Demandes</a>.`, 
-          'success'
-        );
+        addToast({
+          type: 'success',
+          title: 'Demande soumise avec succès',
+          message: `Vous pouvez consulter vos demandes dans la section <a href="${route('mes.demandes')}" class="toast-link">Mes Demandes</a>.`,
+          duration: 8000
+        });
       }
       
       showModal.value = false;
@@ -252,10 +414,14 @@ const submitRequest = () => {
       console.error("Erreurs:", errors);
       
       if (errors.message) {
-        showFlashMessage(`<strong>Erreur !</strong><br>${errors.message}`, 'error');
+        addToast({
+          type: 'error',
+          title: 'Erreur',
+          message: errors.message
+        });
       } else {
         // Message d'erreur détaillé
-        let errorMessage = '<strong>Erreur lors de la soumission :</strong><br>';
+        let errorMessage = '';
         let hasErrors = false;
         
         for (const key in errors) {
@@ -266,26 +432,89 @@ const submitRequest = () => {
         }
         
         if (!hasErrors) {
-          errorMessage += 'Une erreur inattendue est survenue. Veuillez réessayer.';
+          errorMessage = 'Une erreur inattendue est survenue. Veuillez réessayer.';
         }
         
-        showFlashMessage(errorMessage, 'error');
+        addToast({
+          type: 'error',
+          title: 'Erreur lors de la soumission',
+          message: errorMessage
+        });
       }
     },
   });
 };
 
-// Fonction pour afficher un message flash avec un type
-const showFlashMessage = (message, type = 'success', timeout = 8000) => {
-  flashMessage.value = message;
-  flashType.value = type;
+// Fonction pour gérer le téléchargement de fichier pour le demandeur principal
+const handleFileUpload = (event) => {
+  const file = event.target.files[0];
+  if (!file) return;
   
-  if (timeout > 0) {
-    setTimeout(() => {
-      flashMessage.value = '';
-      flashType.value = '';
-    }, timeout);
+  form.lettre_cv_path = file;
+  
+  // Notification pour le document téléchargé
+  const documentType = form.type === 'Académique' 
+    ? 'Lettre de recommandation' 
+    : 'CV';
+    
+  addToast({
+    type: 'success',
+    title: 'Document téléchargé',
+    message: `${documentType} ajouté avec succès`,
+    duration: 3000
+  });
+};
+
+// Fonction pour vérifier la validité du formulaire avant soumission
+const validateForm = () => {
+  // Vérification de base du formulaire
+  if (!form.nom || !form.prenom || !form.email || !form.telephone || 
+      !form.universite || !form.filiere || !form.niveau_etude ||
+      !form.date_debut || !form.date_fin || !form.structure_id) {
+    
+    addToast({
+      type: 'error',
+      title: 'Formulaire incomplet',
+      message: 'Veuillez remplir tous les champs obligatoires',
+      duration: 5000
+    });
+    return false;
   }
+  
+  // Vérification des dates
+  if (!isDateValid.value) {
+    addToast({
+      type: 'error',
+      title: 'Dates invalides',
+      message: 'La date de fin doit être après la date de début',
+      duration: 5000
+    });
+    return false;
+  }
+  
+  // Vérification des membres pour les demandes en groupe
+  if (form.nature === 'Groupe' && (!form.membres || form.membres.length === 0)) {
+    addToast({
+      type: 'error',
+      title: 'Membres manquants',
+      message: 'Veuillez sélectionner au moins un membre pour le groupe',
+      duration: 5000
+    });
+    return false;
+  }
+  
+  // Vérification du document principal
+  if (!form.lettre_cv_path) {
+    addToast({
+      type: 'warning',
+      title: 'Document manquant',
+      message: `Veuillez télécharger ${form.type === 'Académique' ? 'une lettre de recommandation' : 'votre CV'}`,
+      duration: 5000
+    });
+    return false;
+  }
+  
+  return true;
 };
 </script>
 
@@ -303,27 +532,6 @@ const showFlashMessage = (message, type = 'success', timeout = 8000) => {
           <button @click="showModal = true" class="btn-primary">
             Soumettre une demande
           </button>
-          <div v-if="flashMessage" 
-               class="flash-message" 
-               :class="{
-                 'success': flashType === 'success',
-                 'error': flashType === 'error',
-                 'warning': flashType === 'warning'
-               }">
-            <div class="flash-message-content">
-              <svg v-if="flashType === 'success'" class="flash-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
-              </svg>
-              <svg v-if="flashType === 'error'" class="flash-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd" />
-              </svg>
-              <svg v-if="flashType === 'warning'" class="flash-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
-              </svg>
-              <div class="flash-message-text" v-html="flashMessage"></div>
-              <button @click="flashMessage = ''" class="flash-close-btn">&times;</button>
-            </div>
-          </div>
         </div>
       </div>
     </div>
@@ -506,7 +714,7 @@ const showFlashMessage = (message, type = 'success', timeout = 8000) => {
                 <p class="mb-3">Pour une demande académique, veuillez fournir :</p>
                 <div class="form-group">
                   <label class="required">Lettre de recommandation</label>
-                  <input type="file" @change="e => form.lettre_cv_path = e.target.files[0]" class="form-input">
+                  <input type="file" @change="handleFileUpload" class="form-input">
                 </div>
               </div>
               
@@ -514,12 +722,14 @@ const showFlashMessage = (message, type = 'success', timeout = 8000) => {
                 <p class="mb-3">Pour une demande professionnelle, veuillez fournir :</p>
                 <div class="form-group">
                   <label class="required">CV</label>
-                  <input type="file" class="form-input mb-2">
+                  <input type="file" @change="handleFileUpload" class="form-input mb-2">
+                  <span v-if="form.lettre_cv_path" class="file-name">
+                    {{ form.lettre_cv_path.name }}
+                  </span>
                 </div>
                 <div class="form-group">
                   <label class="required">Diplômes</label>
                   <input type="file" multiple class="form-input">
-                  <small class="text-gray-500">Vous pouvez sélectionner plusieurs fichiers</small>
                 </div>
               </div>
             </div>
@@ -669,6 +879,57 @@ const showFlashMessage = (message, type = 'success', timeout = 8000) => {
         </div>
       </div>
     </div>
+
+    <!-- Système de toast notifications -->
+    <TransitionGroup 
+      tag="div" 
+      class="fixed top-4 right-4 z-50 flex flex-col gap-3 max-w-md"
+      enter-active-class="transition duration-300 ease-out"
+      enter-from-class="transform translate-x-full opacity-0"
+      enter-to-class="transform translate-x-0 opacity-100"
+      leave-active-class="transition duration-200 ease-in"
+      leave-from-class="transform translate-x-0 opacity-100"
+      leave-to-class="transform translate-x-full opacity-0"
+    >
+      <div
+        v-for="toast in toasts"
+        :key="toast.id"
+        :class="[
+          'rounded-lg shadow-lg p-4 flex items-center border-l-4 min-w-80',
+          toast.type === 'success' && 'bg-green-50 border-green-500 text-green-800',
+          toast.type === 'error' && 'bg-red-50 border-red-500 text-red-800',
+          toast.type === 'warning' && 'bg-yellow-50 border-yellow-500 text-yellow-800',
+          toast.type === 'info' && 'bg-blue-50 border-blue-500 text-blue-800',
+        ]"
+      >
+        <div class="mr-3">
+          <svg v-if="toast.type === 'success'" xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+          </svg>
+          <svg v-if="toast.type === 'error'" xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+          <svg v-if="toast.type === 'warning'" xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-yellow-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+          </svg>
+          <svg v-if="toast.type === 'info'" xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+        </div>
+        <div class="flex-1">
+          <div class="font-medium" v-html="toast.title"></div>
+          <div class="text-sm opacity-90" v-html="toast.message"></div>
+        </div>
+        <button 
+          @click="removeToast(toast.id)" 
+          class="ml-4 text-gray-400 hover:text-gray-600 transition-colors"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+            <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd" />
+          </svg>
+        </button>
+      </div>
+    </TransitionGroup>
   </Stagiaire>
 </template>
 
@@ -1200,5 +1461,17 @@ const showFlashMessage = (message, type = 'success', timeout = 8000) => {
 .membre-info {
   background-color: #f9fafb;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+/* Styles pour le système de toast */
+.toast-link {
+  color: inherit;
+  text-decoration: underline;
+  font-weight: 600;
+}
+
+/* Ajustements pour s'assurer que le toast passe au-dessus de la modal */
+.fixed {
+  z-index: 100;
 }
 </style>

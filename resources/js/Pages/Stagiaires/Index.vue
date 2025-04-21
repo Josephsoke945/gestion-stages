@@ -68,18 +68,19 @@
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                           <path d="M17 3a2.85 2.85 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/>
                         </svg>
-                        Modifier
+                  
                       </button>
                       <button 
-                        @click="deleteStagiaire(stagiaire.id_stagiaire)" 
-                        class="text-red-600 hover:text-red-800 font-medium flex items-center gap-1"
+                        @click="openDeleteModal(stagiaire)" 
+                        class="text-red-600 hover:text-red-800 flex items-center"
+                        title="Supprimer"
                       >
-                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" viewBox="0 0 24 24" fill="none" 
+                          stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                           <path d="M3 6h18"/>
                           <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/>
                           <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/>
                         </svg>
-                        Supprimer
                       </button>
                     </div>
                   </td>
@@ -275,7 +276,58 @@
         </div>
         
         <!-- Composant Toast pour les notifications -->
-        <Toast ref="toast" />
+        <AdminToast ref="toast" />
+
+        <!-- Modale de confirmation de suppression -->
+        <div v-if="showDeleteModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div class="bg-white rounded-lg shadow-xl max-w-2xl w-full mx-4">
+            <!-- En-tête de la modale -->
+            <div class="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
+              <h3 class="text-xl font-bold text-gray-800">
+                Confirmer la suppression
+              </h3>
+              <button @click="closeDeleteModal" class="text-gray-500 hover:text-gray-700 transition-colors">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            <!-- Contenu de la modale -->
+            <div class="px-6 py-4">
+              <p class="text-gray-700">
+                Êtes-vous sûr de vouloir supprimer le stagiaire "{{ stagiaireToDelete?.user?.prenom }} {{ stagiaireToDelete?.user?.nom }}"?
+              </p>
+            </div>
+
+            <!-- Boutons de navigation -->
+            <div class="flex justify-between pt-6 border-t mt-6">
+              <button 
+                type="button" 
+                @click="closeDeleteModal()" 
+                class="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors focus:outline-none focus:ring-2 focus:ring-gray-400 flex items-center gap-1"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M18 6 6 18M6 6l12 12"/>
+                </svg>
+                Annuler
+              </button>
+
+              <button 
+                type="button" 
+                @click="confirmDelete()" 
+                class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors focus:outline-none focus:ring-2 focus:ring-red-500 flex items-center gap-1"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M3 6h18"/>
+                  <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/>
+                  <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/>
+                </svg>
+                Supprimer
+              </button>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   </SimpleLayout>
@@ -285,57 +337,22 @@
 import { ref, watch, onMounted } from 'vue';
 import { router, usePage } from '@inertiajs/vue3';
 import SimpleLayout from '@/Layouts/SimpleLayout.vue';
-import Toast from '@/Components/Toast.vue'; // Importez le nouveau composant
+import AdminToast from '@/Components/AdminToast.vue';
 
 const props = defineProps({
   stagiaires: Array
 });
 
 const page = usePage();
-const toast = ref(null); // Référence au composant Toast
-
-// Surveiller les changements dans les messages flash
-watch(() => page.props.flash, (newVal) => {
-  if (newVal?.success && toast.value) {
-    toast.value.addToast({
-      type: 'success',
-      title: 'Succès',
-      message: newVal.success
-    });
-  }
-  
-  if (newVal?.error && toast.value) {
-    toast.value.addToast({
-      type: 'error',
-      title: 'Erreur',
-      message: newVal.error
-    });
-  }
-}, { deep: true });
-
-// Vérifier s'il y a des messages flash au chargement
-onMounted(() => {
-  if (page.props.flash?.success && toast.value) {
-    toast.value.addToast({
-      type: 'success',
-      title: 'Succès',
-      message: page.props.flash.success
-    });
-  }
-  
-  if (page.props.flash?.error && toast.value) {
-    toast.value.addToast({
-      type: 'error',
-      title: 'Erreur',
-      message: page.props.flash.error
-    });
-  }
-});
-
+const toast = ref(null);
 const isModalOpen = ref(false);
 const editing = ref(false);
 const currentId = ref(null);
 const processing = ref(false);
+
+// Ajout des variables pour la confirmation de suppression
+const showDeleteModal = ref(false);
+const stagiaireToDelete = ref(null);
 
 const form = ref({
   nom: '',
@@ -349,6 +366,31 @@ const form = ref({
   filiere: '',
   password: '',
   password_confirmation: ''
+});
+
+// Surveiller les messages flash et les afficher automatiquement
+onMounted(() => {
+  // Vérifier si des messages flash existent au chargement
+  setTimeout(() => {
+    const { flash } = page.props;
+    if (flash) {
+      if (flash.success && toast.value) {
+        toast.value.addToast({
+          type: 'success',
+          title: 'Succès',
+          message: flash.success
+        });
+      }
+      
+      if (flash.error && toast.value) {
+        toast.value.addToast({
+          type: 'error',
+          title: 'Erreur',
+          message: flash.error
+        });
+      }
+    }
+  }, 100);
 });
 
 const openModal = () => {
@@ -383,6 +425,24 @@ const editStagiaire = (stagiaire) => {
   isModalOpen.value = true;
 };
 
+// Fonctions pour le modal de confirmation de suppression
+const openDeleteModal = (stagiaire) => {
+  stagiaireToDelete.value = stagiaire;
+  showDeleteModal.value = true;
+};
+
+const closeDeleteModal = () => {
+  showDeleteModal.value = false;
+  stagiaireToDelete.value = null;
+};
+
+const confirmDelete = () => {
+  if (!stagiaireToDelete.value) return;
+  
+  deleteStagiaire(stagiaireToDelete.value.id_stagiaire);
+  closeDeleteModal();
+};
+
 const submit = () => {
   processing.value = true;
   if (editing.value) {
@@ -390,7 +450,13 @@ const submit = () => {
       onSuccess: () => {
         closeModal();
         processing.value = false;
-        // Les messages sont gérés par le système de toast via watch
+        if (toast.value) {
+          toast.value.addToast({
+            type: 'success',
+            title: 'Stagiaire modifié',
+            message: `Le stagiaire "${form.value.prenom} ${form.value.nom}" a été mis à jour avec succès.`
+          });
+        }
       },
       onError: (errors) => {
         console.log(errors);
@@ -409,7 +475,13 @@ const submit = () => {
       onSuccess: () => {
         closeModal();
         processing.value = false;
-        // Les messages sont gérés par le système de toast via watch
+        if (toast.value) {
+          toast.value.addToast({
+            type: 'success',
+            title: 'Stagiaire ajouté',
+            message: `Le stagiaire "${form.value.prenom} ${form.value.nom}" a été ajouté avec succès.`
+          });
+        }
       },
       onError: (errors) => {
         console.log(errors);
@@ -427,21 +499,28 @@ const submit = () => {
 };
 
 const deleteStagiaire = (id) => {
-  if (confirm('Voulez-vous vraiment supprimer ce stagiaire ?')) {
-    router.delete(`/stagiaires/${id}`, {
-      onSuccess: () => {
-        // Les messages sont gérés par le système de toast via watch
-      },
-      onError: () => {
-        if (toast.value) {
-          toast.value.addToast({
-            type: 'error',
-            title: 'Erreur de suppression',
-            message: 'Impossible de supprimer ce stagiaire'
-          });
-        }
+  // Trouver le stagiaire pour afficher son nom dans le message de confirmation
+  const stagiaire = props.stagiaires.find(s => s.id_stagiaire === id);
+  
+  router.delete(`/stagiaires/${id}`, {
+    onSuccess: () => {
+      if (toast.value) {
+        toast.value.addToast({
+          type: 'success',
+          title: 'Stagiaire supprimé',
+          message: `Le stagiaire "${stagiaire?.user?.prenom || ''} ${stagiaire?.user?.nom || ''}" a été supprimé avec succès.`
+        });
       }
-    });
-  }
+    },
+    onError: () => {
+      if (toast.value) {
+        toast.value.addToast({
+          type: 'error',
+          title: 'Erreur de suppression',
+          message: 'Impossible de supprimer ce stagiaire'
+        });
+      }
+    }
+  });
 };
 </script>

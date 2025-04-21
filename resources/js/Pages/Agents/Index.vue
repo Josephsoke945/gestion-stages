@@ -1,32 +1,49 @@
 <script setup>
-import { ref, watch } from 'vue';
+import { ref, watch, onMounted } from 'vue';
 import { Head, useForm, usePage, router } from '@inertiajs/vue3';
 import SimpleLayout from '@/Layouts/SimpleLayout.vue';
+import AdminToast from '@/Components/AdminToast.vue';
 
 const props = defineProps({
   agents: Array,
 });
 
-// Gestion du flash message Inertia
 const page = usePage();
-const flash = ref(page.props.flash?.success || '');
-watch(() => page.props.flash, (newVal) => {
-  flash.value = newVal?.success || '';
-  if (flash.value) {
-    setTimeout(() => (flash.value = ''), 4000);
-  }
-});
-
-// Contrôle de la modale et de la progression du formulaire
+const toast = ref(null);
 const showModal = ref(false);
+const showDeleteModal = ref(false);
+const agentToDelete = ref(null);
 const editingId = ref(null);
 const step = ref(1);
 
-// Ajout d'une variable pour la confirmation du mot de passe
 const passwordConfirmation = ref('');
 const passwordError = ref('');
 
-// Définition du formulaire avec tous les champs nécessaires
+// Surveiller les messages flash et les afficher automatiquement
+onMounted(() => {
+  // Vérifier si des messages flash existent au chargement
+  setTimeout(() => {
+    const { flash } = page.props;
+    if (flash) {
+      if (flash.success && toast.value) {
+        toast.value.addToast({
+          type: 'success',
+          title: 'Succès',
+          message: flash.success
+        });
+      }
+      
+      if (flash.error && toast.value) {
+        toast.value.addToast({
+          type: 'error',
+          title: 'Erreur',
+          message: flash.error
+        });
+      }
+    }
+  }, 100);
+});
+
 const form = useForm({
   nom: '',
   prenom: '',
@@ -37,37 +54,30 @@ const form = useForm({
   matricule: '',
   fonction: '',
   password: '',
-  password_confirmation: '', // Ajout du champ de confirmation
+  password_confirmation: '',
   date_embauche: '',
 });
 
 function openModal(agent = null) {
-  step.value = 1; // Réinitialiser la progression
-  passwordError.value = ''; // Réinitialiser les erreurs personnalisées
+  step.value = 1;
+  passwordError.value = '';
   
   if (agent) {
-    console.log('Mode édition :', agent);
-    // Remplissage des infos personnelles issues de la table users
     form.nom = agent.user?.nom || '';
     form.prenom = agent.user?.prenom || '';
     form.email = agent.user?.email || '';
     form.telephone = agent.user?.telephone || '';
     form.date_de_naissance = agent.user?.date_de_naissance || '';
     form.sexe = agent.user?.sexe || '';
-    // Infos spécifiques de l'agent
     form.matricule = agent.matricule;
     form.fonction = agent.fonction;
     form.date_embauche = agent.date_embauche;
-    // Réinitialiser les mots de passe
     form.password = '';
     form.password_confirmation = '';
     editingId.value = agent.id;
-    console.log('editingId après modification :', editingId.value);
   } else {
-    console.log('Mode ajout');
     form.reset();
     editingId.value = null;
-    console.log('editingId après reset :', editingId.value);
   }
   showModal.value = true;
 }
@@ -80,25 +90,39 @@ function closeModal() {
   passwordError.value = '';
 }
 
+// Fonctions pour le modal de confirmation de suppression
+function openDeleteModal(agent) {
+  agentToDelete.value = agent;
+  showDeleteModal.value = true;
+}
+
+function closeDeleteModal() {
+  showDeleteModal.value = false;
+  agentToDelete.value = null;
+}
+
+function confirmDelete() {
+  if (!agentToDelete.value) return;
+  
+  destroy(agentToDelete.value.id);
+  closeDeleteModal();
+}
+
 function validatePasswords() {
-  // Si on est en mode édition et aucun mot de passe n'est fourni, on autorise
   if (editingId.value && !form.password) {
     return true;
   }
   
-  // Vérifier que les mots de passe correspondent
   if (form.password !== form.password_confirmation) {
     passwordError.value = 'Les mots de passe ne correspondent pas';
     return false;
   }
   
-  // En mode création, le mot de passe est obligatoire
   if (!editingId.value && !form.password) {
     passwordError.value = 'Le mot de passe est obligatoire';
     return false;
   }
   
-  // Vérifier la longueur minimale du mot de passe s'il est fourni
   if (form.password && form.password.length < 8) {
     passwordError.value = 'Le mot de passe doit contenir au moins 8 caractères';
     return false;
@@ -110,7 +134,6 @@ function validatePasswords() {
 
 function nextStep() {
   if (step.value === 1) {
-    // Valider les mots de passe avant de passer à l'étape suivante
     if (!validatePasswords()) {
       return;
     }
@@ -119,30 +142,87 @@ function nextStep() {
 }
 
 function submit() {
-  // Vérifier une dernière fois les mots de passe
   if (!validatePasswords()) {
-    step.value = 1; // Retourner à l'étape du mot de passe
+    step.value = 1;
     return;
   }
   
-  console.log('Submit avec editingId :', editingId.value);
   if (editingId.value) {
     form.put(route('agents.update', editingId.value), {
       preserveScroll: true,
-      onSuccess: () => closeModal(),
+      onSuccess: () => {
+        closeModal();
+        // Afficher un message personnalisé
+        if (toast.value) {
+          toast.value.addToast({
+            type: 'success',
+            title: 'Agent modifié',
+            message: `L'agent "${form.prenom} ${form.nom}" a été mis à jour avec succès.`
+          });
+        }
+      },
+      onError: () => {
+        if (toast.value) {
+          toast.value.addToast({
+            type: 'error',
+            title: 'Erreur de validation',
+            message: 'Veuillez vérifier les informations saisies'
+          });
+        }
+      }
     });
   } else {
     form.post(route('agents.store'), {
       preserveScroll: true,
-      onSuccess: () => closeModal(),
+      onSuccess: () => {
+        closeModal();
+        // Afficher un message personnalisé
+        if (toast.value) {
+          toast.value.addToast({
+            type: 'success',
+            title: 'Agent ajouté',
+            message: `L'agent "${form.prenom} ${form.nom}" a été ajouté avec succès.`
+          });
+        }
+      },
+      onError: () => {
+        if (toast.value) {
+          toast.value.addToast({
+            type: 'error',
+            title: 'Erreur de validation',
+            message: 'Veuillez vérifier les informations saisies'
+          });
+        }
+      }
     });
   }
 }
 
 function destroy(id) {
-  if (confirm('Voulez-vous vraiment supprimer cet agent ?')) {
-    router.delete(route('agents.destroy', id));
-  }
+  // Trouver l'agent pour afficher son nom dans le message de confirmation
+  const agent = props.agents.find(a => a.id === id);
+  
+  router.delete(route('agents.destroy', id), {
+    onSuccess: () => {
+      // Afficher un message personnalisé
+      if (toast.value) {
+        toast.value.addToast({
+          type: 'success',
+          title: 'Agent supprimé',
+          message: `L'agent "${agent?.user?.prenom || ''} ${agent?.user?.nom || ''}" a été supprimé avec succès.`
+        });
+      }
+    },
+    onError: () => {
+      if (toast.value) {
+        toast.value.addToast({
+          type: 'error',
+          title: 'Erreur de suppression',
+          message: 'Impossible de supprimer cet agent'
+        });
+      }
+    }
+  });
 }
 </script>
 
@@ -224,25 +304,29 @@ function destroy(id) {
                   <td class="px-6 py-4 border-b border-gray-200">{{ agent.fonction }}</td>
                   <td class="px-6 py-4 border-b border-gray-200">
                     <div class="flex justify-center space-x-3">
-                      <button @click="openModal(agent)"
-                        class="text-blue-600 hover:text-blue-800 font-medium flex items-center gap-1">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
-                          stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                          <path d="M17 3a2.85 2.85 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
-                        </svg>
-                        Modifier
-                      </button>
-                      <button @click="destroy(agent.id)"
-                        class="text-red-600 hover:text-red-800 font-medium flex items-center gap-1">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
-                          stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                          <path d="M3 6h18" />
-                          <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
-                          <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
-                        </svg>
-                        Supprimer
-                      </button>
-                    </div>
+  <!-- Bouton Modifier -->
+  <button 
+    @click="openModal(agent)"
+    class="text-blue-600 hover:text-blue-800 flex items-center"
+    title="Modifier"
+  >
+    <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" viewBox="0 0 24 24" fill="none"
+      stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M17 3a2.85 2.85 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/>
+    </svg>
+  </button>
+
+  <!-- Bouton Supprimer -->
+  <button @click="openDeleteModal(agent)" title="Supprimer"
+    class="text-red-600 hover:text-red-800 transition-colors ml-2">
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
+      stroke="currentColor" class="w-5 h-5">
+      <path stroke-linecap="round" stroke-linejoin="round"
+        d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" />
+    </svg>
+  </button>
+</div>
+
                   </td>
                 </tr>
               </tbody>
@@ -446,7 +530,48 @@ function destroy(id) {
             </form>
           </div>
         </div>
+
+        <!-- Modal de confirmation de suppression -->
+        <div v-if="showDeleteModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div class="bg-white rounded-lg shadow-xl max-w-md w-full mx-4 overflow-hidden">
+            <div class="px-6 py-4 bg-red-50 border-b border-red-100">
+              <div class="flex items-center">
+                <div class="flex-shrink-0 bg-red-100 rounded-full p-2 mr-3">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                  </svg>
+                </div>
+                <h3 class="text-lg font-medium text-red-800">Supprimer l'agent</h3>
+              </div>
+            </div>
+            
+            <div class="px-6 py-4">
+              <p class="text-gray-700 mb-4">
+                Voulez-vous vraiment supprimer l'agent "{{ agentToDelete?.user?.prenom || '' }} {{ agentToDelete?.user?.nom || '' }}" ?<br>
+                Cette action est irréversible.
+              </p>
+              
+              <div class="flex justify-end space-x-3">
+                <button 
+                  @click="closeDeleteModal" 
+                  class="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
+                >
+                  Annuler
+                </button>
+                <button 
+                  @click="confirmDelete" 
+                  class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+                >
+                  Supprimer
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   </SimpleLayout>
+  
+  <!-- Composant Toast pour les notifications -->
+  <AdminToast ref="toast" />
 </template>
