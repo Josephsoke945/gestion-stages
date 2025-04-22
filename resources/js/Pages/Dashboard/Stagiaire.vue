@@ -5,10 +5,12 @@ import Stagiaire from '@/Layouts/Stagiaire.vue';
 
 const props = defineProps(['auth', 'structures', 'users']);
 const showModal = ref(false);
+const memberInfosLoaded = ref(false);
 const codeSuivi = ref('');
 const step = ref(1);
 const searchQuery = ref(''); // Pour la recherche de membres
 const documentsRequired = ref([]); // Pour stocker les documents requis selon le type
+const showMembersList = ref(false); // Pour contrôler l'affichage de la liste des membres
 
 // Système de toast
 const toasts = ref([]);
@@ -17,7 +19,7 @@ let toastCounter = 0;
 // Fonction pour ajouter un toast
 const addToast = ({ type = 'info', title = '', message = '', duration = 5000 }) => {
   const id = toastCounter++;
-  
+
   toasts.value.push({
     id,
     type,
@@ -43,20 +45,51 @@ const memberInfos = reactive({});
 
 // Fonction pour charger les informations des membres
 const loadMemberInfos = () => {
-  props.users.forEach(user => {
-    memberInfos[user.id] = {
-      nom: user.nom,
-      prenom: user.prenom,
-      email: user.email,
-      telephone: user.telephone
-    };
-  });
-  console.log('Informations des membres chargées:', memberInfos);
+  if (props.users && props.users.length > 0) {
+    props.users.forEach(user => {
+      memberInfos[user.id] = {
+        nom: user.nom,
+        prenom: user.prenom,
+        email: user.email,
+        telephone: user.telephone
+      };
+    });
+    console.log('Informations des membres chargées:', memberInfos);
+  } else {
+    console.error('Aucun utilisateur disponible dans props.users');
+  }
+  memberInfosLoaded.value = true;
+};
+
+// Appeler loadMemberInfos immédiatement pour être sûr que les données sont chargées
+loadMemberInfos();
+
+// Fonction pour gérer la recherche
+const handleSearchInput = () => {
+  // Montrer la liste des résultats lors de la saisie
+  showMembersList.value = true;
+  
+  // Journalisation pour le débogage
+  console.log('Recherche en cours:', searchQuery.value);
+  setTimeout(() => {
+    console.log('Résultats trouvés:', filteredUsers.value.length);
+  }, 100);
 };
 
 // Charger les informations des membres au montage du composant
 onMounted(() => {
   loadMemberInfos();
+  
+  // Afficher les informations sur les utilisateurs disponibles
+  console.log('Montage du composant. Utilisateurs disponibles:', props.users.length);
+  console.log('Premier utilisateur:', props.users.length > 0 ? props.users[0] : 'Aucun');
+  
+  // Vérifier que les IDs sont des nombres
+  if (props.users.length > 0) {
+    props.users.forEach(user => {
+      console.log(`Utilisateur ${user.id} (${typeof user.id}): ${user.nom} ${user.prenom}`);
+    });
+  }
 });
 
 const form = useForm({
@@ -71,7 +104,7 @@ const form = useForm({
   date_fin: '',
   structure_id: '',
   nature: 'Individuel',
-  type: 'Académique',
+  type: 'Académique', // Maintenant indépendant de la nature
   lettre_cv_path: null,
   pieces_jointes: [], // Tableau pour stocker les pièces jointes multiples
   membres: [],
@@ -81,61 +114,92 @@ const form = useForm({
 const handleMemberFile = (memberId, fileType, event) => {
   const file = event.target.files[0];
   if (!file) return;
-  
+
   if (!memberDocuments[memberId]) {
     memberDocuments[memberId] = {};
   }
-  
+
   memberDocuments[memberId][fileType] = file;
-  
+
   // Notifications pour les documents téléchargés
   const memberName = getUserInfo(memberId).nom + ' ' + getUserInfo(memberId).prenom;
-  const documentType = fileType === 'lettre_cv_path' 
-    ? 'Lettre de recommandation' 
+  const documentType = fileType === 'lettre_cv_path'
+    ? 'Lettre de recommandation'
     : (fileType === 'cv' ? 'CV' : 'Diplômes');
-  
+
   addToast({
     type: 'success',
     title: 'Document téléchargé',
     message: `${documentType} de ${memberName} ajouté avec succès`,
     duration: 3000
   });
-  
+
   console.log('Document ajouté pour membre', memberId, fileType, file.name);
 };
 
-// Obtenir les informations complètes de l'utilisateur
+// Obtenir les informations complètes de l'utilisateur directement à partir de props.users
 const getUserInfo = (userId) => {
-  // Utiliser les informations stockées dans memberInfos
-  if (memberInfos[userId]) {
-    return memberInfos[userId];
+  // Vérifier que userId est défini
+  if (!userId) {
+    console.error('getUserInfo appelé avec un userId invalide:', userId);
+    return { nom: '', prenom: '', email: '', telephone: '' };
   }
   
-  // Fallback à la recherche dans props.users
-  const user = props.users.find(user => user.id === userId);
+  // Convertir en nombre si c'est une chaîne
+  const id = typeof userId === 'string' ? parseInt(userId) : userId;
+  
+  // Essayer de trouver l'utilisateur directement dans props.users
+  const user = props.users.find(u => u.id === id);
   if (user) {
-    // Stocker les infos pour une utilisation future
-    memberInfos[userId] = {
+    console.log('Utilisateur trouvé dans props.users:', user);
+    return {
       nom: user.nom,
       prenom: user.prenom,
       email: user.email,
       telephone: user.telephone
     };
-    return memberInfos[userId];
   }
   
-  // Si aucune information n'est trouvée, retourner un objet vide
+  console.error('Aucun utilisateur trouvé pour id:', id);
   return { nom: '', prenom: '', email: '', telephone: '' };
 };
 
 // Filtrer les utilisateurs selon la recherche
 const filteredUsers = computed(() => {
-  if (!searchQuery.value) return props.users;
-  const query = searchQuery.value.toLowerCase();
-  return props.users.filter(user => 
-    user.nom.toLowerCase().includes(query) || 
-    user.prenom.toLowerCase().includes(query)
-  );
+  // Vérifier que nous avons des utilisateurs
+  if (!props.users || props.users.length === 0) {
+    console.log('Aucun utilisateur disponible');
+    return [];
+  }
+  
+  // Si le champ de recherche est vide ou ne contient que des espaces, afficher jusqu'à 10 utilisateurs
+  if (!searchQuery.value || searchQuery.value.trim() === '') {
+    return props.users.slice(0, 10);
+  }
+  
+  // Nettoyer la requête et la convertir en minuscules
+  const query = searchQuery.value.toLowerCase().trim();
+  
+  // Filtrer les utilisateurs dont le nom ou prénom contient la requête
+  const results = props.users.filter(user => {
+    // S'assurer que l'utilisateur a un nom et un prénom
+    if (!user.nom || !user.prenom) return false;
+    
+    // Créer différentes variations du nom pour la recherche
+    const nom = user.nom.toLowerCase();
+    const prenom = user.prenom.toLowerCase();
+    const fullName = `${nom} ${prenom}`;
+    const reverseName = `${prenom} ${nom}`;
+    
+    // Vérifier si la requête correspond à l'une des variations
+    return nom.includes(query) || 
+           prenom.includes(query) || 
+           fullName.includes(query) || 
+           reverseName.includes(query);
+  });
+  
+  console.log(`Recherche "${query}" : ${results.length} résultats trouvés`);
+  return results;
 });
 
 // Surveiller le changement de nature pour réinitialiser les membres si on passe à Individuel
@@ -185,8 +249,8 @@ const isDateValid = computed(() => {
 const validateStep = () => {
   if (step.value === 1) {
     return form.nom && form.prenom && form.email && form.telephone &&
-           // Validation supplémentaire pour le mode groupe
-           (form.nature !== 'Groupe' || (form.membres && form.membres.length > 0));
+      // Validation supplémentaire pour le mode groupe
+      (form.nature !== 'Groupe' || (form.membres && form.membres.length > 0));
   }
   if (step.value === 2) {
     return form.universite && form.filiere && form.niveau_etude &&
@@ -204,7 +268,7 @@ const validateStep = () => {
 const nextStep = () => {
   if (!validateStep()) {
     let errorMessage = '';
-    
+
     if (step.value === 1) {
       if (form.nature === 'Groupe' && (!form.membres || form.membres.length === 0)) {
         errorMessage = "Veuillez sélectionner au moins un membre pour le groupe";
@@ -220,16 +284,16 @@ const nextStep = () => {
       else if (!form.structure_id) errorMessage = "Veuillez sélectionner une structure";
       else if (!isDateValid.value) errorMessage = "La date de fin doit être après la date de début";
     }
-    
+
     addToast({
       type: 'error',
       title: 'Champs obligatoires',
       message: errorMessage
     });
-    
+
     return;
   }
-  
+
   // Si les étapes sont valides, on peut afficher un message de progression
   if (step.value === 1) {
     addToast({
@@ -253,7 +317,7 @@ const nextStep = () => {
       duration: 3000
     });
   }
-  
+
   step.value++;
 };
 
@@ -264,10 +328,10 @@ const prevStep = () => {
 // Fonction pour vérifier si les membres ont soumis les documents requis à l'étape 3
 const checkMemberDocuments = () => {
   if (form.nature !== 'Groupe' || form.membres.length === 0) return true;
-  
+
   let allDocumentsSubmitted = true;
   const missingDocuments = [];
-  
+
   form.membres.forEach(memberId => {
     const member = getUserInfo(memberId);
     if (!memberDocuments[memberId] || !Object.keys(memberDocuments[memberId]).length) {
@@ -275,7 +339,7 @@ const checkMemberDocuments = () => {
       missingDocuments.push(`${member.nom} ${member.prenom}`);
     }
   });
-  
+
   if (!allDocumentsSubmitted) {
     addToast({
       type: 'warning',
@@ -284,7 +348,7 @@ const checkMemberDocuments = () => {
       duration: 6000
     });
   }
-  
+
   return allDocumentsSubmitted;
 };
 
@@ -313,7 +377,7 @@ watch(() => form.membres, (newMembers, oldMembers) => {
         message: `${member.nom} ${member.prenom} a été retiré du groupe`,
         duration: 3000
       });
-      
+
       // Nettoyer les documents du membre supprimé
       if (memberDocuments[removedMemberId]) {
         delete memberDocuments[removedMemberId];
@@ -328,7 +392,7 @@ const submitRequest = () => {
   if (!validateForm()) {
     return;
   }
-  
+
   // Informer l'utilisateur que la soumission est en cours
   addToast({
     type: 'info',
@@ -336,10 +400,10 @@ const submitRequest = () => {
     message: 'Veuillez patienter pendant l\'envoi de votre demande...',
     duration: 10000
   });
-  
+
   // Préparation des données pour inclure les documents des membres
   const formData = new FormData();
-  
+
   // Ajouter les champs de base du formulaire
   Object.keys(form).forEach(key => {
     // Ignorer les données qui seront traitées spécialement
@@ -347,17 +411,17 @@ const submitRequest = () => {
       formData.append(key, form[key]);
     }
   });
-  
+
   // Ajouter la pièce jointe principale
   if (form.lettre_cv_path) {
     formData.append('lettre_cv_path', form.lettre_cv_path);
   }
-  
+
   // Ajouter les membres
   if (form.membres && form.membres.length > 0) {
     form.membres.forEach((memberId, index) => {
       formData.append(`membres[${index}]`, memberId);
-      
+
       // Ajouter les documents de ce membre
       if (memberDocuments[memberId]) {
         Object.keys(memberDocuments[memberId]).forEach(docType => {
@@ -366,15 +430,15 @@ const submitRequest = () => {
       }
     });
   }
-  
+
   // Soumettre le formulaire avec les données préparées
   form.post(route('demande_stages.store'), {
     onSuccess: (response) => {
       console.log('Réponse complète:', response);
-      
+
       // Tentative pour extraire le code de suivi d'où qu'il vienne
       let codeFound = false;
-      
+
       // Vérification dans différents emplacements possibles
       if (response?.props?.flash?.code_suivi) {
         codeSuivi.value = response.props.flash.code_suivi;
@@ -386,9 +450,24 @@ const submitRequest = () => {
         codeSuivi.value = response.props.flash.success.code_suivi;
         codeFound = true;
       }
-      
+
       // Si un code a été trouvé, afficher un message de succès
       if (codeFound) {
+        // Stocker l'ID de la demande pour l'envoi d'email
+        const demandeId = response.props?.demande_id || response.props?.flash?.demande_id || demande.id;
+
+        // Automatiquement envoyer un email de confirmation
+        if (demandeId) {
+          try {
+            // Le composant EmailSender est utilisé ailleurs dans le template
+            // Ici, nous simulons l'envoi manuel pour les cas où on n'a pas accès à ce composant directement
+            handleEmailSending(demandeId, form.email, form.nature === 'Groupe' && form.membres.length > 0);
+          } catch (emailError) {
+            console.error("Erreur lors de l'envoi de l'email:", emailError);
+            // Ne pas bloquer le flux si l'email échoue
+          }
+        }
+
         addToast({
           type: 'success',
           title: 'Demande soumise avec succès',
@@ -404,7 +483,7 @@ const submitRequest = () => {
           duration: 8000
         });
       }
-      
+
       showModal.value = false;
       form.reset();
       Object.keys(memberDocuments).forEach(key => delete memberDocuments[key]);
@@ -412,7 +491,7 @@ const submitRequest = () => {
     },
     onError: (errors) => {
       console.error("Erreurs:", errors);
-      
+
       if (errors.message) {
         addToast({
           type: 'error',
@@ -423,18 +502,18 @@ const submitRequest = () => {
         // Message d'erreur détaillé
         let errorMessage = '';
         let hasErrors = false;
-        
+
         for (const key in errors) {
           if (errors[key]) {
             errorMessage += `- ${errors[key]}<br>`;
             hasErrors = true;
           }
         }
-        
+
         if (!hasErrors) {
           errorMessage = 'Une erreur inattendue est survenue. Veuillez réessayer.';
         }
-        
+
         addToast({
           type: 'error',
           title: 'Erreur lors de la soumission',
@@ -449,14 +528,14 @@ const submitRequest = () => {
 const handleFileUpload = (event) => {
   const file = event.target.files[0];
   if (!file) return;
-  
+
   form.lettre_cv_path = file;
-  
+
   // Notification pour le document téléchargé
-  const documentType = form.type === 'Académique' 
-    ? 'Lettre de recommandation' 
+  const documentType = form.type === 'Académique'
+    ? 'Lettre de recommandation'
     : 'CV';
-    
+
   addToast({
     type: 'success',
     title: 'Document téléchargé',
@@ -468,10 +547,10 @@ const handleFileUpload = (event) => {
 // Fonction pour vérifier la validité du formulaire avant soumission
 const validateForm = () => {
   // Vérification de base du formulaire
-  if (!form.nom || !form.prenom || !form.email || !form.telephone || 
-      !form.universite || !form.filiere || !form.niveau_etude ||
-      !form.date_debut || !form.date_fin || !form.structure_id) {
-    
+  if (!form.nom || !form.prenom || !form.email || !form.telephone ||
+    !form.universite || !form.filiere || !form.niveau_etude ||
+    !form.date_debut || !form.date_fin || !form.structure_id) {
+
     addToast({
       type: 'error',
       title: 'Formulaire incomplet',
@@ -480,7 +559,7 @@ const validateForm = () => {
     });
     return false;
   }
-  
+
   // Vérification des dates
   if (!isDateValid.value) {
     addToast({
@@ -491,7 +570,7 @@ const validateForm = () => {
     });
     return false;
   }
-  
+
   // Vérification des membres pour les demandes en groupe
   if (form.nature === 'Groupe' && (!form.membres || form.membres.length === 0)) {
     addToast({
@@ -502,7 +581,7 @@ const validateForm = () => {
     });
     return false;
   }
-  
+
   // Vérification du document principal
   if (!form.lettre_cv_path) {
     addToast({
@@ -513,12 +592,107 @@ const validateForm = () => {
     });
     return false;
   }
-  
+
   return true;
 };
-</script>
 
+// Ajouter cette fonction pour gérer l'envoi manuel d'emails
+const handleEmailSending = async (demandeId, email, sendToMembres = false) => {
+  try {
+    console.log('Tentative d\'envoi d\'email:', {
+      demande_id: demandeId,
+      email: email,
+      send_to_membres: sendToMembres
+    });
+    
+    // Obtenir le token CSRF
+    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+    if (!csrfToken) {
+      console.error('Token CSRF non trouvé');
+      throw new Error('Token CSRF manquant. Veuillez actualiser la page.');
+    }
+    
+    const response = await fetch('/api/emails/demande-confirmation', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRF-TOKEN': csrfToken
+      },
+      body: JSON.stringify({
+        demande_id: demandeId,
+        email: email,
+        send_to_membres: sendToMembres
+      })
+    });
+
+    console.log('Réponse du serveur:', response.status, response.statusText);
+    
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('Réponse d\'erreur:', errorText);
+      throw new Error(`Erreur serveur: ${response.status} ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    console.log('Données de réponse:', data);
+
+    if (data.success) {
+      addToast({
+        type: 'success',
+        title: 'Email envoyé avec succès',
+        message: `Un email de confirmation a été envoyé à ${email}${data.emails_sent > 1 ? ' et ' + (data.emails_sent - 1) + ' autres destinataires' : ''}`,
+        duration: 5000
+      });
+      
+      // Vérifier la configuration email actuelle
+      try {
+        const configResponse = await fetch('/api/emails/check-config');
+        const configData = await configResponse.json();
+        console.log('Configuration email actuelle:', configData);
+      } catch (configError) {
+        console.error('Impossible de vérifier la configuration email:', configError);
+      }
+    } else {
+      throw new Error(data.message || "Erreur lors de l'envoi de l'email");
+    }
+
+    return data;
+  } catch (error) {
+    console.error('Erreur détaillée lors de l\'envoi d\'email:', error);
+    
+    addToast({
+      type: 'error',
+      title: 'Email non envoyé',
+      message: `L'envoi de l'email a échoué: ${error.message}. Veuillez vérifier la configuration email ou contacter l'administrateur.`,
+      duration: 8000
+    });
+
+    // Recommander à l'utilisateur de vérifier la configuration
+    addToast({
+      type: 'info',
+      title: 'Suggestion',
+      message: 'Vérifiez que le service de messagerie est correctement configuré dans les paramètres du serveur. Vous pouvez consulter vos demandes dans la section Mes Demandes.',
+      duration: 10000
+    });
+
+    throw error;
+  }
+};
+
+// Fonction pour vérifier si un membre est déjà dans la liste
+const isMemberSelected = (userId) => {
+  // Convertir userId en nombre si c'est une chaîne
+  const id = typeof userId === 'string' ? parseInt(userId) : userId;
+  
+  // Vérifier si l'ID existe dans le tableau des membres, en tenant compte du type
+  return form.membres.some(memberId => {
+    const memId = typeof memberId === 'string' ? parseInt(memberId) : memberId;
+    return memId === id;
+  });
+};
+</script>
 <template>
+
   <Head title="Tableau de bord - Stagiaire" />
   <Stagiaire>
     <template #header>
@@ -567,14 +741,14 @@ const validateForm = () => {
               <div class="form-grid">
                 <div class="form-group">
                   <label class="required">Nom</label>
-                  <input v-model="form.nom" type="text" class="form-input" :disabled="true" 
-                        title="Ce champ ne peut pas être modifié">
+                  <input v-model="form.nom" type="text" class="form-input modified-field" :disabled="true"
+                    title="Ce champ ne peut pas être modifié">
                   <span v-if="form.errors.nom" class="error-msg">{{ form.errors.nom }}</span>
                 </div>
                 <div class="form-group">
                   <label class="required">Prénom</label>
-                  <input v-model="form.prenom" type="text" class="form-input" :disabled="true"
-                        title="Ce champ ne peut pas être modifié">
+                  <input v-model="form.prenom" type="text" class="form-input modified-field" :disabled="true"
+                    title="Ce champ ne peut pas être modifié">
                 </div>
                 <div class="form-group">
                   <label class="required">Email</label>
@@ -586,7 +760,7 @@ const validateForm = () => {
                 </div>
               </div>
             </div>
-            
+
             <div class="form-section">
               <h3 class="section-title">Type de demande</h3>
               <div class="form-grid">
@@ -597,8 +771,9 @@ const validateForm = () => {
                     <option>Groupe</option>
                   </select>
                 </div>
-                
-                <div class="form-group" v-if="form.nature === 'Groupe'">
+
+                <!-- Type de demande (maintenant toujours visible, indépendant de la nature) -->
+                <div class="form-group">
                   <label>Type de demande</label>
                   <select v-model="form.type" class="form-input">
                     <option>Académique</option>
@@ -606,49 +781,77 @@ const validateForm = () => {
                   </select>
                 </div>
               </div>
-              
+
               <!-- Champ conditionnel pour les membres du groupe avec recherche -->
-              <div v-if="form.nature === 'Groupe'" class="form-group">
+              <div v-if="form.nature === 'Groupe'" class="form-group mt-4">
                 <label class="required">Membres du groupe</label>
                 <div class="search-container">
-                  <input v-model="searchQuery" type="text" placeholder="Rechercher des membres..." 
-                        class="form-input mb-2">
+                  <input v-model="searchQuery" type="text" placeholder="Rechercher des membres par nom ou prénom..."
+                    class="form-input search-input mb-2" @focus="showMembersList = true" @input="handleSearchInput">
+                  <span v-if="searchQuery.trim() !== ''" class="search-clear" @click="searchQuery = ''; handleSearchInput()">×</span>
                 </div>
+                
                 <div class="members-select-container">
-                  <div v-for="user in filteredUsers" :key="user.id" 
-                       class="member-option" 
-                       :class="{ 'selected': form.membres.includes(user.id), 'disabled': user.id === auth.user.id }">
-                    <input type="checkbox" 
-                           :value="user.id" 
-                           v-model="form.membres" 
-                           :disabled="user.id === auth.user.id" 
-                           :id="`member-${user.id}`">
-                    <label :for="`member-${user.id}`" class="ml-2">
-                      {{ user.nom }} {{ user.prenom }}
-                      <span v-if="user.id === auth.user.id">(Vous)</span>
-                    </label>
+                  <div v-if="filteredUsers.length > 0">
+                    <div v-for="user in filteredUsers" :key="user.id" class="member-option"
+                      :class="{ 'selected': isMemberSelected(user.id), 'disabled': user.id === auth.user.id }">
+                      <input type="checkbox" :value="user.id" v-model="form.membres" :disabled="user.id === auth.user.id"
+                        :id="`member-${user.id}`">
+                      <label :for="`member-${user.id}`" class="ml-2 member-label">
+                        {{ user.nom }} {{ user.prenom }}
+                        <span v-if="user.id === auth.user.id">(Vous)</span>
+                      </label>
+                    </div>
                   </div>
-                  <p v-if="filteredUsers.length === 0" class="text-gray-500 mt-2">Aucun membre trouvé</p>
+                  <p v-else-if="searchQuery && searchQuery.trim() !== ''" class="text-gray-500 mt-2 p-2">
+                    Aucun membre trouvé pour "{{ searchQuery.trim() }}". Vérifiez l'orthographe ou essayez un autre nom.
+                  </p>
+                  <p v-else class="text-gray-500 mt-2 p-2">
+                    Commencez à taper un nom pour rechercher des membres
+                  </p>
                 </div>
               </div>
             </div>
-            
-            <!-- Affichage des informations des membres sélectionnés en mode grisé -->
+
+            <!-- Affichage des informations des membres sélectionnés -->
             <div v-if="form.nature === 'Groupe' && form.membres.length > 0" class="form-section">
               <h3 class="section-title">Informations des membres</h3>
+              
               <div v-for="memberId in form.membres" :key="memberId" class="membre-info mb-4 p-3 border rounded">
-                <h4 class="font-medium mb-2">{{ getUserInfo(memberId).nom }} {{ getUserInfo(memberId).prenom }}</h4>
-                <div class="form-grid">
-                  <div class="form-group">
-                    <label>Email</label>
-                    <input type="text" :value="getUserInfo(memberId).email" class="form-input" disabled>
+                <div class="bg-blue-50 p-2 mb-2">
+                  <div class="font-medium mb-2 text-blue-700">
+                    {{ getUserInfo(memberId).nom || 'Nom non disponible' }} 
+                    {{ getUserInfo(memberId).prenom || 'Prénom non disponible' }}
                   </div>
-                  <div class="form-group">
+                  
+                  <div v-if="!memberInfosLoaded" class="text-red-500 text-sm">
+                    Chargement des informations en cours...
+                  </div>
+                </div>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label>Email</label>
+                    <input type="text" :value="getUserInfo(memberId).email" class="form-input bg-gray-100 w-full" disabled readonly>
+                  </div>
+                  
+                  <div>
                     <label>Téléphone</label>
-                    <input type="text" :value="getUserInfo(memberId).telephone" class="form-input" disabled>
+                    <input type="text" :value="getUserInfo(memberId).telephone" class="form-input bg-gray-100 w-full" disabled readonly>
                   </div>
                 </div>
               </div>
+
+              <!-- Section de débogage - Étape 1 -->
+              <!-- <div class="mt-4 p-2 bg-yellow-50 border border-yellow-200 rounded">
+                <h4 class="font-medium text-yellow-800 mb-2">Informations de débogage:</h4>
+                <div class="text-sm">
+                  <p>Membres sélectionnés: {{ form.membres.join(', ') }}</p>
+                  <p>Utilisateurs disponibles: {{ props.users.length }}</p>
+                  <p>Info du premier utilisateur: {{ props.users.length > 0 ? JSON.stringify(props.users[0]) : 'Aucun' }}</p>
+                  <p>Chargement des infos: {{ memberInfosLoaded ? 'Terminé' : 'En cours' }}</p>
+                </div>
+              </div> -->
             </div>
           </div>
 
@@ -717,7 +920,7 @@ const validateForm = () => {
                   <input type="file" @change="handleFileUpload" class="form-input">
                 </div>
               </div>
-              
+
               <div v-else>
                 <p class="mb-3">Pour une demande professionnelle, veuillez fournir :</p>
                 <div class="form-group">
@@ -733,27 +936,28 @@ const validateForm = () => {
                 </div>
               </div>
             </div>
-            
+
             <!-- Documents pour les membres du groupe -->
             <div v-if="form.nature === 'Groupe' && form.membres.length > 0" class="form-section">
               <h3 class="section-title">Documents des membres du groupe</h3>
               <p class="mb-3">Chaque membre du groupe doit fournir les documents requis.</p>
-              
+
               <div v-for="membreId in form.membres" :key="membreId" class="membre-documents mb-4 p-3 border rounded">
                 <h4 class="font-medium mb-2">{{ getUserInfo(membreId).nom }} {{ getUserInfo(membreId).prenom }}</h4>
-                
+
                 <div v-if="form.type === 'Académique'">
                   <div class="form-group">
                     <label>Lettre de recommandation</label>
                     <div class="file-upload-container">
-                      <input type="file" @change="e => handleMemberFile(membreId, 'lettre_cv_path', e)" class="form-input">
+                      <input type="file" @change="e => handleMemberFile(membreId, 'lettre_cv_path', e)"
+                        class="form-input">
                       <span v-if="memberDocuments[membreId]?.lettre_cv_path" class="file-name">
                         {{ memberDocuments[membreId].lettre_cv_path.name }}
                       </span>
                     </div>
                   </div>
                 </div>
-                
+
                 <div v-else>
                   <div class="form-group">
                     <label>CV</label>
@@ -788,18 +992,18 @@ const validateForm = () => {
                 <p><strong>Spécialité :</strong> {{ form.filiere }}</p>
                 <p><strong>Niveau d'étude :</strong> {{ form.niveau_etude }}</p>
                 <p><strong>Structure :</strong>
-                  {{ structures.find(s => s.id === form.structure_id)?.libelle }}
+                  {{structures.find(s => s.id === form.structure_id)?.libelle}}
                 </p>
                 <p><strong>Période :</strong> {{ form.date_debut }} au {{ form.date_fin }}</p>
                 <p><strong>Type de demande :</strong> {{ form.type }}</p>
                 <p><strong>Nature :</strong> {{ form.nature }}</p>
               </div>
             </div>
-            
+
             <!-- Informations des participants (demandeur principal et membres) -->
             <div class="form-section mt-4">
               <h3 class="section-title">Participants</h3>
-              
+
               <!-- Demandeur principal -->
               <div class="confirmation-item mb-4">
                 <h3 class="flex items-center">
@@ -814,22 +1018,22 @@ const validateForm = () => {
                   <div class="participant-documents">
                     <h4>Documents soumis</h4>
                     <p v-if="form.lettre_cv_path">
-                      <strong>{{ form.type === 'Académique' ? 'Lettre de recommandation' : 'CV' }} :</strong> 
+                      <strong>{{ form.type === 'Académique' ? 'Lettre de recommandation' : 'CV' }} :</strong>
                       {{ form.lettre_cv_path.name || 'Document téléchargé' }}
                     </p>
                     <p v-else class="text-yellow-600">Aucun document principal téléchargé</p>
                   </div>
                 </div>
               </div>
-              
+
               <!-- Membres du groupe -->
               <div v-if="form.nature === 'Groupe' && form.membres.length > 0">
                 <div v-for="memberId in form.membres" :key="memberId" class="confirmation-item mb-4">
-                  <h3>{{ getUserInfo(memberId).nom }} {{ getUserInfo(memberId).prenom }}</h3>
+                  <h3>{{ getUserInfo(memberId).nom || 'Nom non disponible' }} {{ getUserInfo(memberId).prenom || 'Prénom non disponible' }}</h3>
                   <div class="participant-details">
                     <div class="participant-info">
-                      <p><strong>Email :</strong> {{ getUserInfo(memberId).email }}</p>
-                      <p><strong>Téléphone :</strong> {{ getUserInfo(memberId).telephone }}</p>
+                      <p><strong>Email :</strong> <span class="text-gray-700">{{ getUserInfo(memberId).email || 'Email non disponible' }}</span></p>
+                      <p><strong>Téléphone :</strong> <span class="text-gray-700">{{ getUserInfo(memberId).telephone || 'Téléphone non disponible' }}</span></p>
                     </div>
                     <div class="participant-documents">
                       <h4>Documents soumis</h4>
@@ -837,7 +1041,7 @@ const validateForm = () => {
                         <!-- Documents selon le type de demande -->
                         <div v-if="form.type === 'Académique'">
                           <p v-if="memberDocuments[memberId]['lettre_cv_path']">
-                            <strong>Lettre de recommandation :</strong> 
+                            <strong>Lettre de recommandation :</strong>
                             {{ memberDocuments[memberId]['lettre_cv_path'].name }}
                           </p>
                           <p v-else class="text-yellow-600">Lettre de recommandation non fournie</p>
@@ -847,7 +1051,7 @@ const validateForm = () => {
                             <strong>CV :</strong> {{ memberDocuments[memberId]['cv'].name }}
                           </p>
                           <p v-else class="text-yellow-600">CV non fourni</p>
-                          
+
                           <p v-if="memberDocuments[memberId]['diplomes']">
                             <strong>Diplômes :</strong> {{ memberDocuments[memberId]['diplomes'].name }}
                           </p>
@@ -861,6 +1065,18 @@ const validateForm = () => {
                   </div>
                 </div>
               </div>
+
+              <!-- Section de débogage - Étape 4 -->
+              <!-- <div class="mt-4 p-2 bg-yellow-50 border border-yellow-200 rounded">
+                <h4 class="font-medium text-yellow-800 mb-2">Informations de débogage:</h4>
+                <div class="text-sm">
+                  <p>Membres sélectionnés: {{ form.membres.join(', ') }}</p>
+                  <p>Utilisateurs disponibles: {{ props.users.length }}</p>
+                  <p>Exemple d'info pour le premier membre (si disponible): 
+                    {{ form.membres.length > 0 ? JSON.stringify(getUserInfo(form.membres[0])) : 'Aucun membre' }}
+                  </p>
+                </div>
+              </div> -->
             </div>
           </div>
 
@@ -881,51 +1097,46 @@ const validateForm = () => {
     </div>
 
     <!-- Système de toast notifications -->
-    <TransitionGroup 
-      tag="div" 
-      class="fixed top-4 right-4 z-50 flex flex-col gap-3 max-w-md"
-      enter-active-class="transition duration-300 ease-out"
-      enter-from-class="transform translate-x-full opacity-0"
-      enter-to-class="transform translate-x-0 opacity-100"
-      leave-active-class="transition duration-200 ease-in"
-      leave-from-class="transform translate-x-0 opacity-100"
-      leave-to-class="transform translate-x-full opacity-0"
-    >
-      <div
-        v-for="toast in toasts"
-        :key="toast.id"
-        :class="[
-          'rounded-lg shadow-lg p-4 flex items-center border-l-4 min-w-80',
-          toast.type === 'success' && 'bg-green-50 border-green-500 text-green-800',
-          toast.type === 'error' && 'bg-red-50 border-red-500 text-red-800',
-          toast.type === 'warning' && 'bg-yellow-50 border-yellow-500 text-yellow-800',
-          toast.type === 'info' && 'bg-blue-50 border-blue-500 text-blue-800',
-        ]"
-      >
+    <TransitionGroup tag="div" class="fixed top-4 right-4 z-50 flex flex-col gap-3 max-w-md"
+      enter-active-class="transition duration-300 ease-out" enter-from-class="transform translate-x-full opacity-0"
+      enter-to-class="transform translate-x-0 opacity-100" leave-active-class="transition duration-200 ease-in"
+      leave-from-class="transform translate-x-0 opacity-100" leave-to-class="transform translate-x-full opacity-0">
+      <div v-for="toast in toasts" :key="toast.id" :class="[
+        'rounded-lg shadow-lg p-4 flex items-center border-l-4 min-w-80',
+        toast.type === 'success' && 'bg-green-50 border-green-500 text-green-800',
+        toast.type === 'error' && 'bg-red-50 border-red-500 text-red-800',
+        toast.type === 'warning' && 'bg-yellow-50 border-yellow-500 text-yellow-800',
+        toast.type === 'info' && 'bg-blue-50 border-blue-500 text-blue-800',
+      ]">
         <div class="mr-3">
-          <svg v-if="toast.type === 'success'" xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <svg v-if="toast.type === 'success'" xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-green-500"
+            fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
           </svg>
-          <svg v-if="toast.type === 'error'" xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <svg v-if="toast.type === 'error'" xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-red-500" fill="none"
+            viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
           </svg>
-          <svg v-if="toast.type === 'warning'" xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-yellow-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+          <svg v-if="toast.type === 'warning'" xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-yellow-500"
+            fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
           </svg>
-          <svg v-if="toast.type === 'info'" xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          <svg v-if="toast.type === 'info'" xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-blue-500" fill="none"
+            viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
         </div>
         <div class="flex-1">
           <div class="font-medium" v-html="toast.title"></div>
           <div class="text-sm opacity-90" v-html="toast.message"></div>
         </div>
-        <button 
-          @click="removeToast(toast.id)" 
-          class="ml-4 text-gray-400 hover:text-gray-600 transition-colors"
-        >
+        <button @click="removeToast(toast.id)" class="ml-4 text-gray-400 hover:text-gray-600 transition-colors">
           <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-            <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd" />
+            <path fill-rule="evenodd"
+              d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
+              clip-rule="evenodd" />
           </svg>
         </button>
       </div>
@@ -1068,7 +1279,7 @@ const validateForm = () => {
 
 .modal-container {
   width: 95%;
-  max-width: 1100px;
+  max-width: 1200px;
   margin: 0 1rem;
   max-height: 90vh;
   overflow-y: auto;
@@ -1079,6 +1290,7 @@ const validateForm = () => {
   border-radius: 0.5rem;
   box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
   overflow: hidden;
+  font-size: 1.05rem;
 }
 
 .modal-header {
@@ -1200,7 +1412,7 @@ const validateForm = () => {
 
 .form-group label {
   display: block;
-  margin-bottom: 0.5rem;
+  margin-bottom: 0.6rem;
   font-weight: 500;
   color: #374151;
 }
@@ -1212,16 +1424,22 @@ const validateForm = () => {
 
 .form-input {
   width: 100%;
-  padding: 0.5rem 0.75rem;
+  padding: 0.6rem 0.85rem;
   border: 1px solid #d1d5db;
   border-radius: 0.375rem;
-  font-size: 1rem;
+  font-size: 1.05rem;
+  background-color: white;
+  transition: border-color 0.2s, box-shadow 0.2s;
 }
 
 .form-input:focus {
   outline: none;
   border-color: #3b82f6;
   box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+}
+
+.form-input::placeholder {
+  color: #9ca3af;
 }
 
 .error-msg {
@@ -1278,44 +1496,124 @@ const validateForm = () => {
 
 /* Nouveaux styles pour la recherche et la sélection des membres */
 .search-container {
+  position: relative;
   margin-bottom: 0.5rem;
 }
 
+.search-input {
+  padding-right: 2.5rem;
+  font-size: 1.05rem;
+  height: auto;
+  padding-top: 0.75rem;
+  padding-bottom: 0.75rem;
+}
+
+.search-clear {
+  position: absolute;
+  right: 0.75rem;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 1.5rem;
+  color: #9ca3af;
+  cursor: pointer;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+}
+
+.search-clear:hover {
+  color: #6b7280;
+  background-color: #f3f4f6;
+}
+
+/* Styles pour la liste des membres */
 .members-select-container {
-  max-height: 200px;
+  max-height: 250px;
   overflow-y: auto;
   border: 1px solid #d1d5db;
   border-radius: 0.375rem;
-  padding: 0.5rem;
+  padding: 0.75rem;
+  margin-bottom: 1rem;
+  background-color: white !important;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
 }
 
 .member-option {
-  padding: 0.5rem;
+  padding: 0.75rem;
   display: flex;
   align-items: center;
   border-radius: 0.25rem;
   transition: background-color 0.2s;
+  margin-bottom: 4px;
+  background-color: #fafafa;
+  font-size: 1.05rem;
 }
 
 .member-option:hover {
-  background-color: #f3f4f6;
+  background-color: #f0f0f0;
 }
 
 .member-option.selected {
-  background-color: #e5e7eb;
+  background-color: #e0f2fe;
+  border-left: 3px solid #3b82f6;
 }
 
-.member-option.disabled {
-  opacity: 0.7;
-  background-color: #f9fafb;
+/* Améliorer l'apparence des options de membres */
+.member-label {
+  display: inline-block;
+  margin-bottom: 0;
+  cursor: pointer;
+  font-weight: 500;
 }
 
-/* Styles pour les champs désactivés */
-.form-input:disabled {
-  background-color: #f3f4f6;
+.member-option input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+}
+
+/* Renforcer la visibilité des champs des membres */
+.membre-info {
+  background-color: #f9fafb !important;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  border: 1px solid #e5e7eb !important;
+  padding: 1rem !important;
+}
+
+.membre-info input {
+  background-color: #f3f4f6 !important;
+  color: #000000 !important;
+  border-color: #d1d5db !important;
+}
+
+/* Styles pour les champs désactivés mais lisibles */
+.form-input:disabled,
+.form-input:readonly,
+.form-input[readonly],
+.bg-gray-100 {
+  background-color: #f3f4f6 !important;
   cursor: not-allowed;
-  opacity: 0.8;
-  color: #4b5563;
+  opacity: 1 !important;
+  color: #000000 !important;
+  border-color: #d1d5db !important;
+  font-weight: 500;
+}
+
+/* Renforcer la visibilité des inputs désactivés */
+input:disabled, 
+select:disabled, 
+textarea:disabled {
+  background-color: #f3f4f6 !important;
+  color: #000000 !important;
+  border-color: #d1d5db !important;
+  opacity: 1 !important;
+}
+
+.text-gray-700 {
+  color: #374151;
 }
 
 /* Styles pour les documents des membres */
@@ -1363,7 +1661,7 @@ const validateForm = () => {
     width: 95%;
     margin: 0 0.5rem;
   }
-  
+
   .form-grid {
     grid-template-columns: 1fr;
   }
@@ -1377,7 +1675,8 @@ const validateForm = () => {
   margin-top: 0.5rem;
 }
 
-.participant-info, .participant-documents {
+.participant-info,
+.participant-documents {
   background-color: #f9fafb;
   padding: 0.75rem;
   border-radius: 0.375rem;

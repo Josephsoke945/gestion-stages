@@ -7,6 +7,7 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DemandeController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\StagiaireController;
+use App\Http\Controllers\Api\EmailController;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Auth;
@@ -30,7 +31,7 @@ Route::get('/dashboard', function () {
         // Récupérer tous les utilisateurs ayant le rôle stagiaire sauf l'utilisateur actuel
         $users = \App\Models\User::where('role', 'stagiaire')
                                 ->where('id', '!=', $user->id)
-                                ->select('id', 'nom', 'prenom')
+                                ->select('id', 'nom', 'prenom', 'email', 'telephone')
                                 ->get();
 
         return Inertia::render('Dashboard/Stagiaire', [
@@ -55,6 +56,10 @@ Route::middleware('auth')->group(function () {
     Route::get('/mes-demandes', [DemandeController::class, 'index'])->name('mes.demandes');
     Route::get('/mes-demandes/{id}', [DemandeController::class, 'show'])->name('mes.demandes.show');
     Route::delete('/mes-demandes/{id}', [DemandeController::class, 'destroy'])->name('mes.demandes.annuler');
+    
+    // Routes pour les emails
+    Route::post('/api/emails/demande-confirmation', [EmailController::class, 'sendDemandeConfirmation']);
+    Route::get('/api/emails/check-config', [EmailController::class, 'checkEmailConfig']);
     
     // Routes pour les stagiaires
     Route::resource('stagiaires', StagiaireController::class);

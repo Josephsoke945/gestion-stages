@@ -7,7 +7,7 @@ use App\Models\User;
 use App\Models\DemandeStage;
 use App\Models\Stagiaire;
 use App\Models\MembreGroupe;
-use App\Mail\DemandeConfirmationMarkdown;
+use App\Mail\DemandeConfirmationMail;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Storage;
@@ -119,7 +119,7 @@ class DemandeController extends Controller
             
             // Envoyer l'email de confirmation
             try {
-                Mail::to($user->email)->send(new DemandeConfirmationMarkdown($demande, $user));
+                Mail::to($user->email)->send(new DemandeConfirmationMail($demande, $user));
                 Log::info('Email de confirmation envoyé à ' . $user->email);
             } catch (\Exception $emailException) {
                 Log::error('Erreur lors de l\'envoi de l\'email: ' . $emailException->getMessage());

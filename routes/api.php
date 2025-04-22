@@ -3,6 +3,7 @@
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\EmailController;
+use App\Http\Controllers\Api\TestMailController;
 
 /*
 |--------------------------------------------------------------------------
@@ -23,4 +24,7 @@ Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
 Route::middleware('auth:sanctum')->group(function () {
     // Envoi d'email de confirmation pour une demande de stage
     Route::post('/emails/demande-confirmation', [EmailController::class, 'sendDemandeConfirmation']);
-}); 
+});
+
+// Route pour le test d'envoi d'email
+Route::get('/test-mail', [TestMailController::class, 'testMail']); 
