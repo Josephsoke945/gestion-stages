@@ -64,6 +64,17 @@ public function isStagiaire()
 {
     return $this->role === 'stagiaire';
 }
+
+public function isAdmin()
+{
+    return $this->role === 'admin';
+}
+
+public function isAgent()
+{
+    return $this->role === 'agent';
+}
+
 public function stagiaire()
 {
     return $this->hasOne(Stagiaire::class);

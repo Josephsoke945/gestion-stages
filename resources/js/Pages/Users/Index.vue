@@ -2,7 +2,7 @@
 <template>
   <Head title="Gestion des utilisateurs" />
 
-  <SimpleLayout>
+  <Admin>
     <div class="py-12">
       <div class="mx-auto max-w-7xl sm:px-6 lg:px-8 space-y-6">
         <!-- En-tête avec titre et bouton d'ajout -->
@@ -253,13 +253,14 @@
         <AdminToast ref="toast" />
       </div>
     </div>
-  </SimpleLayout>
+  </Admin>
 </template>
 
 <script setup>
 import { ref, onMounted } from 'vue';
 import { Head, useForm, router, usePage } from '@inertiajs/vue3';
-import SimpleLayout from '@/Layouts/SimpleLayout.vue';
+import Admin from '@/Layouts/Admin.vue';
+//import SimpleLayout from '@/Layouts/SimpleLayout.vue';
 import AdminToast from '@/Components/AdminToast.vue';
 
 const props = defineProps({

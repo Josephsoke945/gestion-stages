@@ -11,43 +11,34 @@ use App\Models\Stagiaire;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 
-class DashboardController extends Controller
+class AdminController extends Controller
 {
-    public function index()
+    /**
+     * Affiche le tableau de bord d'administration
+     */
+    public function dashboard()
     {
-        if (!Auth::check()) {
-            return redirect()->route('login');
+        // Vérifier si l'utilisateur est un administrateur
+        if (!Auth::user() || Auth::user()->role !== 'admin') {
+            return redirect()->route('dashboard')->with('error', 'Accès non autorisé. Vous devez être administrateur.');
         }
 
-        $user = Auth::user();
-        
-        if ($user && $user->role === 'admin') {
-            return redirect()->route('admin.dashboard');
-        } else if ($user && $user->role === 'stagiaire') {
-            return inertia('Dashboard/Stagiaire');
-        }
-
-        return inertia('Dashboard/Default');
-    }
-    
-    public function adminDashboard()
-    {
         try {
             // Count statistics for admin dashboard with error handling
             $stats = [
                 'users' => User::count(),
                 'structures' => Structure::count(),
-                'stagiaires' => User::where('role', 'stagiaire')->count(),
-                'agents' => User::where('role', 'agent')->count(),
+                'stagiaires' => Stagiaire::count(),
+                'agents' => Agent::count(),
             ];
             
-            return inertia('Dashboard/Admin', [
+            return Inertia::render('Dashboard/Admin', [
                 'stats' => $stats
             ]);
         } catch (\Exception $e) {
             // Capture l'erreur et fourni un fallback pour les statistiques
             Log::error("Erreur dans le dashboard admin: " . $e->getMessage());
-            return inertia('Dashboard/Admin', [
+            return Inertia::render('Dashboard/Admin', [
                 'stats' => [
                     'users' => 0,
                     'structures' => 0,
@@ -58,4 +49,4 @@ class DashboardController extends Controller
             ]);
         }
     }
-}
+} 

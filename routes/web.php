@@ -51,6 +51,15 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
     
+    // Admin routes
+    Route::prefix('admin')->name('admin.')->middleware(['auth'])->group(function() {
+        Route::get('/dashboard', [App\Http\Controllers\AdminController::class, 'dashboard'])->name('dashboard');
+        Route::get('/users', [UserController::class, 'index'])->name('users.index');
+        Route::get('/structures', [StructureController::class, 'index'])->name('structures.index');
+        Route::get('/stagiaires', [StagiaireController::class, 'index'])->name('stagiaires.index');
+        Route::get('/agents', [AgentController::class, 'index'])->name('agents.index');
+    });
+    
     // Routes pour les demandes de stage
     Route::post('/demande-stages', [DemandeController::class, 'store'])->name('demande_stages.store');
     Route::get('/mes-demandes', [DemandeController::class, 'index'])->name('mes.demandes');

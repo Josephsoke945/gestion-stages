@@ -1,7 +1,8 @@
 <script setup>
 import { ref, watch, onMounted } from 'vue';
 import { Head, useForm, usePage, router } from '@inertiajs/vue3';
-import SimpleLayout from '@/Layouts/SimpleLayout.vue';
+//import SimpleLayout from '@/Layouts/SimpleLayout.vue';
+import Admin from '@/Layouts/Admin.vue';
 import AdminToast from '@/Components/AdminToast.vue';
 
 const props = defineProps({
@@ -228,7 +229,7 @@ function destroy(id) {
 
 <template>
   <Head title="Gestion des Agents" />
-  <SimpleLayout>
+  <Admin>
     <div class="py-12">
       <div class="mx-auto max-w-7xl sm:px-6 lg:px-8 space-y-6">
         <!-- En-tête avec titre et bouton d'ajout -->
@@ -570,7 +571,7 @@ function destroy(id) {
         </div>
       </div>
     </div>
-  </SimpleLayout>
+  </Admin>
   
   <!-- Composant Toast pour les notifications -->
   <AdminToast ref="toast" />

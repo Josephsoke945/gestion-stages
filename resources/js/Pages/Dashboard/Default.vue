@@ -1,6 +1,18 @@
 <script setup>
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
-import { Head } from '@inertiajs/vue3';
+import { Head, onMounted } from '@inertiajs/vue3';
+import { router } from '@inertiajs/vue3';
+
+// Redirect admin users to admin dashboard
+onMounted(() => {
+    // Check if the user is authenticated and has a role
+    if (window.$page && window.$page.props && window.$page.props.auth && window.$page.props.auth.user) {
+        const userRole = window.$page.props.auth.user.role;
+        if (userRole === 'admin') {
+            router.visit(route('admin.dashboard'));
+        }
+    }
+});
 </script>
 
 <template>
