@@ -4,14 +4,30 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\HasOne;
-use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class DemandeStage extends Model
 {
     use HasFactory;
-
+    
+    /**
+     * La table associée au modèle.
+     *
+     * @var string
+     */
+    protected $table = 'demande_stages';
+    
+    /**
+     * La clé primaire associée à la table.
+     *
+     * @var string
+     */
+    protected $primaryKey = 'id';
+    
+    /**
+     * Les attributs qui sont assignables en masse.
+     *
+     * @var array<int, string>
+     */
     protected $fillable = [
         'stagiaire_id',
         'structure_id',
@@ -24,94 +40,39 @@ class DemandeStage extends Model
         'statut',
         'date_soumission',
     ];
-
+    
+    /**
+     * Les attributs qui doivent être convertis.
+     *
+     * @var array<string, string>
+     */
     protected $casts = [
         'date_debut' => 'date',
         'date_fin' => 'date',
-        'date_soumission' => 'date',
+        'date_soumission' => 'datetime',
     ];
-
+    
     /**
-     * Get the stagiaire that made the demande.
+     * Relation avec le stagiaire
      */
-    public function stagiaire(): BelongsTo
+    public function stagiaire()
     {
         return $this->belongsTo(Stagiaire::class, 'stagiaire_id', 'id_stagiaire');
     }
-
+    
     /**
-     * Get the structure for this demande.
+     * Relation avec la structure
      */
-    public function structure(): BelongsTo
+    public function structure()
     {
         return $this->belongsTo(Structure::class);
     }
-
+    
     /**
-     * Get the stage created from this demande (if accepted).
+     * Relation avec les membres du groupe
      */
-    public function stage(): HasOne
+    public function membres()
     {
-        return $this->hasOne(Stage::class);
-    }
-
-    /**
-     * Get the membres du groupe for this demande.
-     */
-    public function membres(): HasMany
-    {
-        return $this->hasMany(MembreGroupe::class);
-    }
-
-    /**
-     * Get the user that owns the demande.
-     */
-    public function user(): BelongsTo
-    {
-        return $this->belongsTo(User::class);
+        return $this->hasMany(MembreGroupe::class, 'demande_stage_id');
     }
 }
-
-// Modèle Stagiaire
-
-
-// Modèle MembreGroupe
-class MembreGroupe extends Model
-{
-    use HasFactory;
-
-    protected $fillable = [
-        'demande_stage_id',
-        'user_id',
-    ];
-
-    /**
-     * Get the demande that owns the membre.
-     */
-    public function demande(): BelongsTo
-    {
-        return $this->belongsTo(DemandeStage::class, 'demande_stage_id');
-    }
-
-    /**
-     * Get the user that is membre.
-     */
-    public function user(): BelongsTo
-    {
-        return $this->belongsTo(User::class);
-    }
-}
-
-// Complément pour le modèle User existant
-// À ajouter dans app/Models/User.php
-/*
-public function stagiaire(): HasOne
-{
-    return $this->hasOne(Stagiaire::class);
-}
-
-public function membreGroupes(): HasMany
-{
-    return $this->hasMany(MembreGroupe::class);
-}
-*/

@@ -2,11 +2,13 @@
 import { Head, useForm } from '@inertiajs/vue3';
 import { ref, computed, watch, reactive, onMounted } from 'vue';
 import Stagiaire from '@/Layouts/Stagiaire.vue';
+import EmailSender from '@/Components/EmailSender.vue';
 
 const props = defineProps(['auth', 'structures', 'users']);
 const showModal = ref(false);
 const memberInfosLoaded = ref(false);
 const codeSuivi = ref('');
+const demandeId = ref(null);
 const step = ref(1);
 const searchQuery = ref(''); // Pour la recherche de membres
 const documentsRequired = ref([]); // Pour stocker les documents requis selon le type
@@ -451,23 +453,12 @@ const submitRequest = () => {
         codeFound = true;
       }
 
+      // Stocker l'ID de la demande pour l'envoi d'email
+      demandeId.value = response.props?.demande_id || response.props?.flash?.demande_id;
+      console.log("ID de la demande stocké pour l'envoi d'email:", demandeId.value);
+
       // Si un code a été trouvé, afficher un message de succès
       if (codeFound) {
-        // Stocker l'ID de la demande pour l'envoi d'email
-        const demandeId = response.props?.demande_id || response.props?.flash?.demande_id || demande.id;
-
-        // Automatiquement envoyer un email de confirmation
-        if (demandeId) {
-          try {
-            // Le composant EmailSender est utilisé ailleurs dans le template
-            // Ici, nous simulons l'envoi manuel pour les cas où on n'a pas accès à ce composant directement
-            handleEmailSending(demandeId, form.email, form.nature === 'Groupe' && form.membres.length > 0);
-          } catch (emailError) {
-            console.error("Erreur lors de l'envoi de l'email:", emailError);
-            // Ne pas bloquer le flux si l'email échoue
-          }
-        }
-
         addToast({
           type: 'success',
           title: 'Demande soumise avec succès',
@@ -594,89 +585,6 @@ const validateForm = () => {
   }
 
   return true;
-};
-
-// Ajouter cette fonction pour gérer l'envoi manuel d'emails
-const handleEmailSending = async (demandeId, email, sendToMembres = false) => {
-  try {
-    console.log('Tentative d\'envoi d\'email:', {
-      demande_id: demandeId,
-      email: email,
-      send_to_membres: sendToMembres
-    });
-    
-    // Obtenir le token CSRF
-    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
-    if (!csrfToken) {
-      console.error('Token CSRF non trouvé');
-      throw new Error('Token CSRF manquant. Veuillez actualiser la page.');
-    }
-    
-    const response = await fetch('/api/emails/demande-confirmation', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-CSRF-TOKEN': csrfToken
-      },
-      body: JSON.stringify({
-        demande_id: demandeId,
-        email: email,
-        send_to_membres: sendToMembres
-      })
-    });
-
-    console.log('Réponse du serveur:', response.status, response.statusText);
-    
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('Réponse d\'erreur:', errorText);
-      throw new Error(`Erreur serveur: ${response.status} ${response.statusText}`);
-    }
-
-    const data = await response.json();
-    console.log('Données de réponse:', data);
-
-    if (data.success) {
-      addToast({
-        type: 'success',
-        title: 'Email envoyé avec succès',
-        message: `Un email de confirmation a été envoyé à ${email}${data.emails_sent > 1 ? ' et ' + (data.emails_sent - 1) + ' autres destinataires' : ''}`,
-        duration: 5000
-      });
-      
-      // Vérifier la configuration email actuelle
-      try {
-        const configResponse = await fetch('/api/emails/check-config');
-        const configData = await configResponse.json();
-        console.log('Configuration email actuelle:', configData);
-      } catch (configError) {
-        console.error('Impossible de vérifier la configuration email:', configError);
-      }
-    } else {
-      throw new Error(data.message || "Erreur lors de l'envoi de l'email");
-    }
-
-    return data;
-  } catch (error) {
-    console.error('Erreur détaillée lors de l\'envoi d\'email:', error);
-    
-    addToast({
-      type: 'error',
-      title: 'Email non envoyé',
-      message: `L'envoi de l'email a échoué: ${error.message}. Veuillez vérifier la configuration email ou contacter l'administrateur.`,
-      duration: 8000
-    });
-
-    // Recommander à l'utilisateur de vérifier la configuration
-    addToast({
-      type: 'info',
-      title: 'Suggestion',
-      message: 'Vérifiez que le service de messagerie est correctement configuré dans les paramètres du serveur. Vous pouvez consulter vos demandes dans la section Mes Demandes.',
-      duration: 10000
-    });
-
-    throw error;
-  }
 };
 
 // Fonction pour vérifier si un membre est déjà dans la liste
@@ -1141,6 +1049,31 @@ const isMemberSelected = (userId) => {
         </button>
       </div>
     </TransitionGroup>
+
+    <!-- Ajouter le composant EmailSender après la soumission réussie de la demande -->
+    <div v-if="codeSuivi && demandeId" class="fixed bottom-5 right-5 w-96 bg-white shadow-lg rounded-lg p-5 border border-gray-200 z-50">
+      <h3 class="text-xl font-semibold mb-3">Confirmation de demande</h3>
+      <p class="mb-2">Votre demande a été soumise avec succès.</p>
+      <p class="mb-4">Code de suivi: <span class="font-mono bg-gray-100 px-2 py-1 rounded">{{ codeSuivi }}</span></p>
+      
+      <EmailSender 
+        :demande-id="demandeId" 
+        :email="form.email"
+        :has-group-members="form.nature === 'Groupe' && form.membres.length > 0"
+        @email-sent="(data) => addToast({
+          type: 'success',
+          title: 'Email envoyé',
+          message: 'Un email de confirmation a été envoyé avec succès.',
+          duration: 5000
+        })"
+        @email-error="(error) => addToast({
+          type: 'error',
+          title: 'Erreur d\'envoi',
+          message: `L'envoi de l'email a échoué: ${error}`,
+          duration: 8000
+        })"
+      />
+    </div>
   </Stagiaire>
 </template>
 

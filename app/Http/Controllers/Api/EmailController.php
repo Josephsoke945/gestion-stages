@@ -3,9 +3,9 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use App\Mail\DemandeConfirmationMail;
+use App\Mail\DemandeConfirmationMarkdown;
 use App\Models\DemandeStage;
-use App\Models\MembreGroupe;
+use App\Models\Stagiaire;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Mail;
@@ -14,90 +14,72 @@ use Illuminate\Support\Facades\Log;
 class EmailController extends Controller
 {
     /**
-     * Envoie un email de confirmation de demande de stage
-     * 
+     * Send a confirmation email for a demande.
+     *
      * @param  \Illuminate\Http\Request  $request
      * @return \Illuminate\Http\JsonResponse
      */
     public function sendDemandeConfirmation(Request $request)
     {
+        // Validate request
         $validated = $request->validate([
             'demande_id' => 'required|exists:demande_stages,id',
-            'email' => 'nullable|email',
-            'send_to_membres' => 'nullable|boolean',
+            'email' => 'required|email',
+            'send_to_members' => 'boolean',
         ]);
 
         try {
-            // Récupérer la demande avec ses relations
-            $demande = DemandeStage::with(['stagiaire.user', 'structure', 'membres.user'])
-                ->findOrFail($validated['demande_id']);
+            // Get the demande
+            $demande = DemandeStage::findOrFail($validated['demande_id']);
             
-            // Si l'email est fourni, l'utiliser, sinon utiliser l'email du stagiaire
-            $email = $validated['email'] ?? $demande->stagiaire->user->email;
+            // Load structure relation for the email
+            $demande->load('structure');
             
-            // Récupérer l'utilisateur principal ou créer un utilisateur temporaire si email personnalisé
-            $user = null;
-            if (isset($validated['email']) && $validated['email'] !== $demande->stagiaire->user->email) {
-                // Utilisateur temporaire (pour les tests ou pour envoyer à une adresse différente)
-                $user = new User([
-                    'nom' => $demande->stagiaire->user->nom,
-                    'prenom' => $demande->stagiaire->user->prenom,
-                    'email' => $validated['email']
-                ]);
-            } else {
-                $user = $demande->stagiaire->user;
-            }
+            // Get the user from email
+            $user = User::where('email', $validated['email'])->firstOrFail();
             
-            // Envoyer l'email au stagiaire principal ou à l'adresse spécifiée
-            Mail::to($email)
-                ->send(new DemandeConfirmationMail($demande, $user));
+            // Send email to the main recipient
+            Mail::to($validated['email'])->send(new DemandeConfirmationMarkdown($demande, $user));
             
-            Log::info("Email de confirmation envoyé à {$email} pour la demande #{$demande->code_suivi}");
-            
-            $emailsSent = 1;
-            $recipients = [$email];
-            
-            // Si demandé et si la demande est de type Groupe, envoyer aussi aux autres membres
-            if (($validated['send_to_membres'] ?? false) && $demande->nature === 'Groupe' && $demande->membres->count() > 0) {
-                foreach ($demande->membres as $membre) {
-                    // S'assurer que l'utilisateur existe et qu'il n'est pas déjà le destinataire principal
-                    if ($membre->user && $membre->user->email !== $email) {
-                        Mail::to($membre->user->email)
-                            ->send(new DemandeConfirmationMail($demande, $membre->user));
-                        
-                        Log::info("Email de confirmation envoyé au membre {$membre->user->email} pour la demande #{$demande->code_suivi}");
-                        
-                        $emailsSent++;
-                        $recipients[] = $membre->user->email;
+            // If send_to_members is true, send emails to group members
+            if ($request->input('send_to_members', false)) {
+                $stagiaire = Stagiaire::where('user_id', $demande->stagiaire->user_id)->first();
+                
+                if ($stagiaire && $stagiaire->group_members) {
+                    $members = json_decode($stagiaire->group_members, true);
+                    
+                    foreach ($members as $member) {
+                        if (isset($member['email']) && filter_var($member['email'], FILTER_VALIDATE_EMAIL)) {
+                            // Don't send again to the main recipient
+                            if ($member['email'] !== $validated['email']) {
+                                // Trouver l'utilisateur correspondant à l'email du membre
+                                $memberUser = User::where('email', $member['email'])->first();
+                                
+                                // Si l'utilisateur n'existe pas, utiliser une instance temporaire
+                                if (!$memberUser) {
+                                    $memberUser = new User();
+                                    $memberUser->nom = $member['nom'] ?? 'Utilisateur';
+                                    $memberUser->prenom = $member['prenom'] ?? '';
+                                    $memberUser->email = $member['email'];
+                                }
+                                
+                                Mail::to($member['email'])->send(new DemandeConfirmationMarkdown($demande, $memberUser));
+                            }
+                        }
                     }
                 }
             }
-            
+
             return response()->json([
                 'success' => true,
-                'message' => 'Emails de confirmation envoyés avec succès',
-                'emails_sent' => $emailsSent,
-                'recipients' => $recipients,
-                'demande' => [
-                    'id' => $demande->id,
-                    'code_suivi' => $demande->code_suivi,
-                ]
+                'message' => 'Email de confirmation envoyé avec succès'
             ]);
-            
         } catch (\Exception $e) {
-            Log::error('Erreur lors de l\'envoi des emails de confirmation: ' . $e->getMessage());
-            
-            // Log de l'erreur complète pour le débogage
-            Log::error($e->getTraceAsString());
+            Log::error('Erreur lors de l\'envoi de l\'email de confirmation: ' . $e->getMessage());
             
             return response()->json([
                 'success' => false,
-                'message' => 'Erreur lors de l\'envoi des emails de confirmation: ' . $e->getMessage(),
-                'error_details' => [
-                    'message' => $e->getMessage(),
-                    'file' => $e->getFile(),
-                    'line' => $e->getLine()
-                ]
+                'message' => 'Erreur lors de l\'envoi de l\'email: ' . $e->getMessage()
             ], 500);
         }
     }

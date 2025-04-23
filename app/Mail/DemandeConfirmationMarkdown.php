@@ -10,13 +10,12 @@ use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
 use Illuminate\Queue\SerializesModels;
 
-class DemandeConfirmationMail extends Mailable
+class DemandeConfirmationMarkdown extends Mailable
 {
     use Queueable, SerializesModels;
 
     public $demande;
     public $user;
-    public $codeSuivi;
     public $url;
 
     /**
@@ -29,7 +28,6 @@ class DemandeConfirmationMail extends Mailable
     {
         $this->demande = $demande;
         $this->user = $user;
-        $this->codeSuivi = $demande->code_suivi;
         $this->url = route('mes.demandes');
     }
 
@@ -39,7 +37,7 @@ class DemandeConfirmationMail extends Mailable
     public function envelope(): Envelope
     {
         return new Envelope(
-            subject: 'Confirmation de votre demande de stage - Code de suivi: ' . $this->codeSuivi,
+            subject: 'Confirmation de votre demande de stage - Code de suivi: ' . $this->demande->code_suivi,
         );
     }
 
@@ -49,7 +47,10 @@ class DemandeConfirmationMail extends Mailable
     public function content(): Content
     {
         return new Content(
-            view: 'emails.demande-confirmation-simple',
+            markdown: 'emails.demande-confirmation-markdown',
+            with: [
+                'url' => $this->url,
+            ],
         );
     }
 
@@ -62,17 +63,4 @@ class DemandeConfirmationMail extends Mailable
     {
         return [];
     }
-
-    /**
-     * Build the message in a simpler way to avoid timeout issues.
-     */
-    public function build()
-    {
-        return $this->view('emails.demande-confirmation-simple')
-            ->with([
-                'nomUser' => $this->user->nom . ' ' . $this->user->prenom,
-                'codeSuivi' => $this->codeSuivi,
-                'url' => $this->url
-            ]);
-    }
-}
+} 

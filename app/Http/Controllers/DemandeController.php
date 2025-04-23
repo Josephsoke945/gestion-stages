@@ -7,7 +7,7 @@ use App\Models\User;
 use App\Models\DemandeStage;
 use App\Models\Stagiaire;
 use App\Models\MembreGroupe;
-use App\Mail\DemandeConfirmationMail;
+use App\Mail\DemandeConfirmationMarkdown;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Storage;
@@ -117,10 +117,27 @@ class DemandeController extends Controller
             // Charger la relation structure pour l'email
             $demande->load('structure');
             
-            // Envoyer l'email de confirmation
+            // Envoyer l'email de confirmation en arrière-plan (via la file d'attente)
             try {
-                Mail::to($user->email)->send(new DemandeConfirmationMail($demande, $user));
+                // Envoyer l'email directement au demandeur principal
+                Mail::to($user->email)
+                    ->send(new DemandeConfirmationMarkdown($demande, $user));
+                
                 Log::info('Email de confirmation envoyé à ' . $user->email);
+                
+                // Envoyer également aux membres du groupe si demande en groupe
+                if ($validated['nature'] === 'Groupe' && !empty($validated['membres'])) {
+                    foreach ($validated['membres'] as $membreId) {
+                        $membre = User::find($membreId);
+                        if ($membre && $membre->id !== $user->id && $membre->email) {
+                            Mail::to($membre->email)
+                                ->send(new DemandeConfirmationMarkdown($demande, $membre));
+                            
+                            Log::info('Email de confirmation envoyé au membre du groupe: ' . $membre->email);
+                        }
+                    }
+                }
+                
             } catch (\Exception $emailException) {
                 Log::error('Erreur lors de l\'envoi de l\'email: ' . $emailException->getMessage());
                 // On continue le processus même si l'email échoue

@@ -1,5 +1,8 @@
 <?php
 
+// Augmenter la limite de temps d'exécution à 60 secondes
+set_time_limit(60);
+
 use Illuminate\Http\Request;
 
 define('LARAVEL_START', microtime(true));
