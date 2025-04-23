@@ -45,6 +45,12 @@ const showingNavigationDropdown = ref(false);
                                 >
                                     Mes Demandes
                                 </NavLink>
+                                <!-- <NavLink
+                                    :href="route('recherche.code')"
+                                    :active="route().current('recherche.code')"
+                                >
+                                    Recherche par code
+                                </NavLink> -->
                             </div>
                         </div>
 
@@ -151,6 +157,18 @@ const showingNavigationDropdown = ref(false);
                             :active="route().current('dashboard')"
                         >
                             Dashboard
+                        </ResponsiveNavLink>
+                        <ResponsiveNavLink
+                            :href="route('mes.demandes')"
+                            :active="route().current('mes.demandes')"
+                        >
+                            Mes Demandes
+                        </ResponsiveNavLink>
+                        <ResponsiveNavLink
+                            :href="route('recherche.code')"
+                            :active="route().current('recherche.code')"
+                        >
+                            Recherche par code
                         </ResponsiveNavLink>
                     </div>
 

@@ -56,6 +56,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/mes-demandes', [DemandeController::class, 'index'])->name('mes.demandes');
     Route::get('/mes-demandes/{id}', [DemandeController::class, 'show'])->name('mes.demandes.show');
     Route::delete('/mes-demandes/{id}', [DemandeController::class, 'destroy'])->name('mes.demandes.annuler');
+    Route::post('/demandes/recherche', [DemandeController::class, 'findByCode'])->name('demandes.search');
+    Route::get('/demandes/recherche', [DemandeController::class, 'findByCode'])->name('demandes.search.get');
+    Route::get('/recherche-code', function () {
+        return Inertia::render('Stagiaire/RechercheCode');
+    })->name('recherche.code');
     
     // Routes pour les emails
     Route::post('/api/emails/demande-confirmation', [EmailController::class, 'sendDemandeConfirmation']);

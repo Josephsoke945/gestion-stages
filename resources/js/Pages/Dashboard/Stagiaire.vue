@@ -18,6 +18,9 @@ const showMembersList = ref(false); // Pour contrôler l'affichage de la liste d
 const toasts = ref([]);
 let toastCounter = 0;
 
+// Variable pour le code de suivi à rechercher
+const searchCode = ref('');
+
 // Fonction pour ajouter un toast
 const addToast = ({ type = 'info', title = '', message = '', duration = 5000 }) => {
   const id = toastCounter++;
@@ -38,6 +41,21 @@ const removeToast = (id) => {
     clearTimeout(toasts.value[index].timeout);
     toasts.value.splice(index, 1);
   }
+};
+
+// Fonction pour rechercher une demande par code de suivi
+const searchByTrackingCode = () => {
+  if (!searchCode.value.trim()) {
+    addToast({
+      type: 'error',
+      title: 'Erreur',
+      message: 'Veuillez saisir un code de suivi',
+      duration: 5000
+    });
+    return;
+  }
+
+  window.location = route('demandes.search.get') + `?code_suivi=${searchCode.value.trim()}`;
 };
 
 // Structure pour stocker les documents soumis par membre
@@ -600,14 +618,48 @@ const isMemberSelected = (userId) => {
 };
 </script>
 <template>
-
-  <Head title="Tableau de bord - Stagiaire" />
+  <Head title="Tableau de bord" />
   <Stagiaire>
     <template #header>
-      <h2 class="text-xl font-semibold text-gray-800">Tableau de bord - Stagiaire</h2>
+      <h2 class="text-xl font-semibold leading-tight text-gray-800">Tableau de bord</h2>
     </template>
 
-    <div class="py-12">
+    <!-- Recherche par code de suivi -->
+    <div class="py-6">
+      <div class="mx-auto max-w-7xl sm:px-6 lg:px-8">
+        <div class="overflow-hidden bg-white shadow-sm sm:rounded-lg">
+          <div class="p-6">
+            <h2 class="text-xl font-semibold text-gray-800 mb-4">Rechercher une demande par code de suivi</h2>
+            <div class="flex flex-wrap gap-4">
+              <div class="flex-grow">
+                <input 
+                  type="text" 
+                  v-model="searchCode"
+                  placeholder="Entrez le code de suivi (ex: AB12CD34)" 
+                  class="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                />
+              </div>
+              <button 
+                @click="searchByTrackingCode" 
+                class="px-6 py-3 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transition-colors duration-200 flex items-center gap-2"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+                Rechercher
+              </button>
+            </div>
+            <p class="mt-3 text-sm text-gray-600">
+              Vous pouvez retrouver rapidement une demande en saisissant son code de suivi unique.
+              Cela vous permet de vérifier son statut même si vous n'êtes pas l'auteur de la demande.
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Formulaire de demande de stage -->
+    <div class="py-6">
       <div class="mx-auto max-w-7xl sm:px-6 lg:px-8">
         <div class="overflow-hidden bg-white shadow-sm sm:rounded-lg p-6">
           <h1 class="text-2xl font-bold mb-4">Bienvenue, {{ auth.user.nom }}</h1>

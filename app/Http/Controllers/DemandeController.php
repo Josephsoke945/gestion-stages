@@ -202,10 +202,13 @@ class DemandeController extends Controller
             ->first();
             
         if (!$demande) {
-            return redirect()->back()->withErrors([
+            return redirect()->route('mes.demandes')->withErrors([
                 'code_suivi' => 'Aucune demande trouvée avec ce code de suivi.'
             ]);
         }
+        
+        // Pas besoin de vérifier les permissions car le code de suivi est public
+        // Cela permet à n'importe qui avec le code de suivre l'état de la demande
         
         return Inertia::render('Stagiaire/ShowDemande', [
             'demande' => $demande
@@ -220,17 +223,18 @@ class DemandeController extends Controller
         // Récupérer le stagiaire connecté
         $stagiaire = Stagiaire::where('user_id', Auth::id())->first();
         
-        if (!$stagiaire) {
-            return redirect()->route('dashboard')->with('error', 'Profil stagiaire non trouvé.');
+        // Initialiser un tableau vide pour les demandes
+        $demandes = collect([]);
+        
+        // Si le stagiaire existe, récupérer ses demandes
+        if ($stagiaire) {
+            $demandes = DemandeStage::where('stagiaire_id', $stagiaire->id_stagiaire)
+                ->with('structure')
+                ->orderBy('created_at', 'desc')
+                ->get();
         }
         
-        // Récupérer toutes les demandes du stagiaire
-        $demandes = DemandeStage::where('stagiaire_id', $stagiaire->id_stagiaire)
-            ->with('structure')
-            ->orderBy('created_at', 'desc')
-            ->get();
-            
-        // Retourner la vue avec les demandes
+        // Retourner la vue avec les demandes (vides ou non)
         return Inertia::render('Stagiaire/MesDemandes', [
             'demandes' => $demandes
         ]);
@@ -241,24 +245,63 @@ class DemandeController extends Controller
      */
     public function destroy($id)
     {
-        // Récupérer la demande
-        $demande = DemandeStage::findOrFail($id);
+        // Récupérer la demande avec la structure et le stagiaire
+        $demande = DemandeStage::with(['structure', 'stagiaire.user'])->findOrFail($id);
         
         // Vérifier que l'utilisateur est autorisé à supprimer cette demande
         $stagiaire = Stagiaire::where('user_id', Auth::id())->first();
         
         if (!$stagiaire || $demande->stagiaire_id !== $stagiaire->id_stagiaire) {
-            return redirect()->back()->with('error', 'Vous n\'êtes pas autorisé à annuler cette demande.');
+            return redirect()->back()->with([
+                'toast' => [
+                    'type' => 'error',
+                    'message' => 'Vous n\'êtes pas autorisé à annuler cette demande.'
+                ]
+            ]);
         }
         
         // Vérifier que la demande est encore en attente
         if ($demande->statut !== 'En attente') {
-            return redirect()->back()->with('error', 'Vous ne pouvez annuler que les demandes en attente.');
+            return redirect()->back()->with([
+                'toast' => [
+                    'type' => 'error',
+                    'message' => 'Vous ne pouvez annuler que les demandes en attente.'
+                ]
+            ]);
+        }
+        
+        // Stocker le code de suivi et l'utilisateur pour l'email avant suppression
+        $codeSuivi = $demande->code_suivi;
+        $user = $demande->stagiaire->user;
+        
+        // Envoyer l'email de confirmation d'annulation
+        try {
+            Mail::to($user->email)->send(new \App\Mail\DemandeAnnulationMail($demande, $user));
+            
+            // Si c'est une demande de groupe, envoyer aussi aux membres
+            if ($demande->nature === 'Groupe') {
+                $membres = \App\Models\MembreGroupe::where('demande_stage_id', $demande->id)->get();
+                
+                foreach ($membres as $membre) {
+                    $membreUser = User::find($membre->user_id);
+                    if ($membreUser && $membreUser->id !== $user->id) {
+                        Mail::to($membreUser->email)->send(new \App\Mail\DemandeAnnulationMail($demande, $membreUser));
+                    }
+                }
+            }
+        } catch (\Exception $e) {
+            Log::error('Erreur lors de l\'envoi de l\'email d\'annulation: ' . $e->getMessage());
+            // On continue le processus même si l'email échoue
         }
         
         // Supprimer la demande
         $demande->delete();
         
-        return redirect()->route('mes.demandes')->with('success', 'Votre demande a été annulée avec succès.');
+        return redirect()->route('mes.demandes')->with([
+            'toast' => [
+                'type' => 'success',
+                'message' => 'Votre demande a été annulée avec succès.'
+            ]
+        ]);
     }
 }

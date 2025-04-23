@@ -1,10 +1,66 @@
 <script setup>
 import { Head, router, Link } from '@inertiajs/vue3';
 import Stagiaire from '@/Layouts/Stagiaire.vue';
+import { ref, onMounted } from 'vue';
 
-defineProps({
+const props = defineProps({
   demandes: Array,
+  errors: Object,
+  toast: Object,
 });
+
+// Système de toast
+const toasts = ref([]);
+let toastCounter = 0;
+
+// Fonction pour ajouter un toast
+const addToast = ({ type = 'info', message = '', duration = 5000, actions = false, onConfirm = null }) => {
+  const id = toastCounter++;
+
+  toasts.value.push({
+    id,
+    type,
+    message,
+    actions,
+    onConfirm,
+    timeout: setTimeout(() => removeToast(id), duration)
+  });
+};
+
+// Fonction pour retirer un toast
+const removeToast = (id) => {
+  const index = toasts.value.findIndex(toast => toast.id === id);
+  if (index !== -1) {
+    clearTimeout(toasts.value[index].timeout);
+    toasts.value.splice(index, 1);
+  }
+};
+
+// Afficher le toast à partir des props (si présent)
+onMounted(() => {
+  if (props.toast) {
+    addToast({
+      type: props.toast.type,
+      message: props.toast.message,
+      duration: 5000
+    });
+  }
+});
+
+// Référence pour le code de suivi à rechercher
+const codeRecherche = ref('');
+
+// Fonction pour rechercher une demande par code de suivi
+const rechercherParCode = () => {
+  if (!codeRecherche.value.trim()) {
+    return;
+  }
+  router.visit(route('demandes.search'), { 
+    method: 'post',
+    data: { code_suivi: codeRecherche.value.trim() },
+    preserveState: false
+  });
+};
 
 // Fonction pour formater une date
 const formatDate = (dateString) => {
@@ -28,9 +84,30 @@ const getStatusColor = (statut) => {
 
 // Fonction pour annuler une demande
 const annulerDemande = (id) => {
-  if (confirm('Êtes-vous sûr de vouloir annuler cette demande ?')) {
-    router.delete(route('mes.demandes.annuler', id));
-  }
+  // On n'utilise plus la confirmation native du navigateur
+  // Au lieu de cela, on ajoute un toast de confirmation avec des boutons
+  addToast({
+    type: 'warning',
+    message: 'Êtes-vous sûr de vouloir annuler cette demande ?',
+    duration: 10000, // Durée plus longue pour permettre à l'utilisateur de lire et réagir
+    actions: true, // Indique que ce toast a des actions
+    onConfirm: () => {
+      // Si l'utilisateur confirme, on procède à l'annulation
+      router.delete(route('mes.demandes.annuler', id), {
+        preserveScroll: true,
+        onSuccess: () => {
+          // Le toast de succès sera géré par la logique onMounted
+        },
+        onError: (errors) => {
+          addToast({
+            type: 'error',
+            message: errors.message || 'Une erreur est survenue lors de l\'annulation',
+            duration: 5000
+          });
+        }
+      });
+    }
+  });
 };
 
 // Fonction pour voir les détails d'une demande
@@ -47,11 +124,111 @@ const voirDetails = (demandeId) => {
       <h2 class="text-2xl font-semibold text-gray-800">Mes Demandes de Stage</h2>
     </template>
 
+    <!-- Toast notifications -->
+    <div class="fixed top-5 right-5 z-50 flex flex-col gap-2 w-96">
+      <TransitionGroup name="toast">
+        <div 
+          v-for="toast in toasts" 
+          :key="toast.id" 
+          :class="{
+            'bg-green-50 border-green-500 text-green-800': toast.type === 'success',
+            'bg-red-50 border-red-500 text-red-800': toast.type === 'error',
+            'bg-blue-50 border-blue-500 text-blue-800': toast.type === 'info',
+            'bg-yellow-50 border-yellow-500 text-yellow-800': toast.type === 'warning'
+          }"
+          class="p-4 border-l-4 shadow-lg rounded flex flex-col"
+        >
+          <div class="flex justify-between items-center">
+            <div class="flex items-center">
+              <svg 
+                v-if="toast.type === 'success'" 
+                class="w-5 h-5 mr-2" 
+                fill="none" 
+                stroke="currentColor" 
+                viewBox="0 0 24 24" 
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+              </svg>
+              <svg 
+                v-if="toast.type === 'error'" 
+                class="w-5 h-5 mr-2" 
+                fill="none" 
+                stroke="currentColor" 
+                viewBox="0 0 24 24" 
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+              </svg>
+              <svg 
+                v-if="toast.type === 'warning'" 
+                class="w-5 h-5 mr-2" 
+                fill="none" 
+                stroke="currentColor" 
+                viewBox="0 0 24 24" 
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+              </svg>
+              <span class="font-medium">{{ toast.message }}</span>
+            </div>
+            <button @click="removeToast(toast.id)" class="text-gray-500 hover:text-gray-800 focus:outline-none">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+              </svg>
+            </button>
+          </div>
+          
+          <!-- Boutons d'action pour les toasts de confirmation -->
+          <div v-if="toast.type === 'warning'" class="mt-3 flex justify-end gap-2">
+            <button
+              @click="removeToast(toast.id)"
+              class="px-3 py-1 bg-gray-200 text-gray-800 rounded hover:bg-gray-300 transition-colors"
+            >
+              Annuler
+            </button>
+            <button
+              @click="() => { toast.onConfirm(); removeToast(toast.id); }"
+              class="px-3 py-1 bg-red-500 text-white rounded hover:bg-red-600 transition-colors"
+            >
+              Confirmer
+            </button>
+          </div>
+        </div>
+      </TransitionGroup>
+    </div>
+
     <div class="py-12">
       <div class="mx-auto max-w-full px-4 sm:px-6 lg:px-8">
         <div class="overflow-hidden bg-white shadow-sm sm:rounded-lg">
           <div class="p-8">
             <h1 class="mb-8 text-3xl font-bold">Historique de mes demandes</h1>
+            
+            <!-- Formulaire de recherche par code de suivi -->
+            <!-- <div class="mb-8 bg-gray-50 p-6 rounded-lg border border-gray-200">
+              <h2 class="text-xl font-semibold text-gray-800 mb-4">Rechercher une demande par code de suivi</h2>
+              <div class="flex flex-wrap gap-4">
+                <div class="flex-grow">
+                  <input 
+                    type="text" 
+                    v-model="codeRecherche"
+                    placeholder="Entrez le code de suivi (ex: AB12CD34)" 
+                    class="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                  />
+                  <p v-if="errors && errors.code_suivi" class="mt-2 text-sm text-red-600">{{ errors.code_suivi }}</p>
+                </div>
+                <button 
+                  @click="rechercherParCode" 
+                  class="px-6 py-3 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transition-colors duration-200 flex items-center gap-2"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                  </svg>
+                  Rechercher
+                </button>
+              </div>
+              <p class="mt-3 text-sm text-gray-600">Vous pouvez retrouver une demande spécifique en saisissant son code de suivi unique.</p>
+            </div> -->
             
             <div v-if="demandes && demandes.length > 0">
               <div class="overflow-x-auto">
@@ -270,5 +447,19 @@ td, th {
     padding: 12px 8px;
     font-size: 14px;
   }
+}
+
+/* Animations pour les toasts */
+.toast-enter-active,
+.toast-leave-active {
+  transition: all 0.5s ease;
+}
+.toast-enter-from {
+  opacity: 0;
+  transform: translateX(30px);
+}
+.toast-leave-to {
+  opacity: 0;
+  transform: translateX(30px);
 }
 </style>
