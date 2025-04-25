@@ -12,9 +12,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('structures', function (Blueprint $table) {
-            //$table->string('nom')->nullable(); // Ajout de la colonne 'nom'
-            $table->string('sigle')->nullable(); // Ajout de la colonne 'sigle'
-            $table->string('libelle')->nullable(); // Ajout de la colonne 'libelle'
+            $table->boolean('active')->default(true);
         });
     }
 
@@ -24,7 +22,7 @@ return new class extends Migration
     public function down(): void
     {
         Schema::table('structures', function (Blueprint $table) {
-            $table->dropColumn(['nom', 'sigle', 'libelle']); // Suppression des colonnes ajoutées
+            $table->dropColumn('active');
         });
     }
 };

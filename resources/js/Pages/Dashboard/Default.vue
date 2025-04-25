@@ -1,10 +1,19 @@
 <script setup>
+import { onMounted } from 'vue';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
-import { Head, onMounted } from '@inertiajs/vue3';
+import { Head } from '@inertiajs/vue3';
 import { router } from '@inertiajs/vue3';
+
+defineProps({
+    error: {
+        type: String,
+        required: false
+    }
+});
 
 // Redirect admin users to admin dashboard
 onMounted(() => {
+    console.log('Default Dashboard mounted');
     // Check if the user is authenticated and has a role
     if (window.$page && window.$page.props && window.$page.props.auth && window.$page.props.auth.user) {
         const userRole = window.$page.props.auth.user.role;
@@ -27,8 +36,18 @@ onMounted(() => {
 
         <div class="py-12">
             <div class="mx-auto max-w-7xl sm:px-6 lg:px-8">
+                <!-- Message d'erreur -->
+                <div v-if="error" class="mb-4 bg-red-100 border-l-4 border-red-500 text-red-700 p-4">
+                    {{ error }}
+                </div>
+
+                <!-- Message flash -->
+                <div v-if="$page.props.flash?.error" class="mb-4 bg-red-100 border-l-4 border-red-500 text-red-700 p-4">
+                    {{ $page.props.flash.error }}
+                </div>
+
                 <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
-                    <div class="p-6 bg-white border-b border-gray-200">
+                    <div class="p-6 text-gray-900">
                         <h1 class="text-2xl font-bold mb-4">Bienvenue sur le tableau de bord</h1>
                         <p>Vous êtes connecté en tant que {{ $page.props.auth.user.role }}.</p>
                     </div>

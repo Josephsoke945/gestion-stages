@@ -57,6 +57,7 @@ const form = useForm({
   password: '',
   password_confirmation: '',
   date_embauche: '',
+  role_agent: '',
 });
 
 function openModal(agent = null) {
@@ -75,6 +76,7 @@ function openModal(agent = null) {
     form.date_embauche = agent.date_embauche;
     form.password = '';
     form.password_confirmation = '';
+    form.role_agent = agent.role_agent;
     editingId.value = agent.id;
   } else {
     form.reset();
@@ -292,6 +294,7 @@ function destroy(id) {
                   <th class="px-6 py-3 border-b border-gray-200 font-medium text-gray-700">Téléphone</th>
                   <th class="px-6 py-3 border-b border-gray-200 font-medium text-gray-700">Matricule</th>
                   <th class="px-6 py-3 border-b border-gray-200 font-medium text-gray-700">Fonction</th>
+                  <th class="px-6 py-3 border-b border-gray-200 font-medium text-gray-700">Rôle</th>
                   <th class="px-6 py-3 border-b border-gray-200 font-medium text-gray-700 text-center">Actions</th>
                 </tr>
               </thead>
@@ -303,6 +306,7 @@ function destroy(id) {
                   <td class="px-6 py-4 border-b border-gray-200">{{ agent.user?.telephone ?? '-' }}</td>
                   <td class="px-6 py-4 border-b border-gray-200">{{ agent.matricule }}</td>
                   <td class="px-6 py-4 border-b border-gray-200">{{ agent.fonction }}</td>
+                  <td class="px-6 py-4 border-b border-gray-200">{{ agent.role_agent }}</td>
                   <td class="px-6 py-4 border-b border-gray-200">
                     <div class="flex justify-center space-x-3">
   <!-- Bouton Modifier -->
@@ -472,6 +476,19 @@ function destroy(id) {
                     class="w-full border rounded-lg p-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     required />
                   <div v-if="form.errors.fonction" class="text-red-600 text-sm mt-1">{{ form.errors.fonction }}</div>
+                </div>
+
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-1">Rôle de l'agent</label>
+                  <select v-model="form.role_agent"
+                    class="w-full border rounded-lg p-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    required>
+                    <option value="">Sélectionner un rôle</option>
+                    <option value="DPAF">Direction du Patrimoine et des Affaires Foncières (DPAF)</option>
+                    <option value="MS">Maître de Stage (MS)</option>
+                    <option value="RS">Responsable de Structure (RS)</option>
+                  </select>
+                  <div v-if="form.errors.role_agent" class="text-red-600 text-sm mt-1">{{ form.errors.role_agent }}</div>
                 </div>
 
                 <div>

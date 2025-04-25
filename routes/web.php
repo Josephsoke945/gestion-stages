@@ -22,30 +22,27 @@ Route::get('/', function () {
     ]);
 });
 
+Route::middleware(['auth', 'verified'])->group(function () {
+    // Redirection du dashboard principal vers le dashboard approprié
 Route::get('/dashboard', function () {
     $user = Auth::user();
 
-    if ($user->role === 'stagiaire') {
-        $structures = \App\Models\Structure::select('id', 'libelle')->get();
-        
-        // Récupérer tous les utilisateurs ayant le rôle stagiaire sauf l'utilisateur actuel
-        $users = \App\Models\User::where('role', 'stagiaire')
-                                ->where('id', '!=', $user->id)
-                                ->select('id', 'nom', 'prenom', 'email', 'telephone')
-                                ->get();
+        if ($user->role === 'admin') {
+            return redirect()->route('admin.dashboard');
+        }
 
-        return Inertia::render('Dashboard/Stagiaire', [
-            'structures' => $structures,
-            'users' => $users,
-        ]);
+        if ($user->agent && $user->agent->role_agent === 'DPAF') {
+            return redirect()->route('agent.dashboard');
+        }
+
+        if ($user->role === 'stagiaire') {
+            return redirect()->route('stagiaire.dashboard');
     }
 
-    // Tableau de bord par défaut pour les agents
-    return app(DashboardController::class)->index();
-})->middleware(['auth', 'verified'])->name('dashboard');
+        // Redirection par défaut
+        return redirect()->route('login');
+    })->name('dashboard');
 
-// Routes protégées par authentification et vérification d'email
-Route::middleware(['auth', 'verified'])->group(function () {
     // Routes de profil
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
@@ -53,11 +50,38 @@ Route::middleware(['auth', 'verified'])->group(function () {
     
     // Admin routes
     Route::prefix('admin')->name('admin.')->middleware(['auth'])->group(function() {
-        Route::get('/dashboard', [App\Http\Controllers\AdminController::class, 'dashboard'])->name('dashboard');
+        // Dashboard admin avec statistiques
+        Route::get('/dashboard', function () {
+            $stats = [
+                'users' => \App\Models\User::count(),
+                'structures' => \App\Models\Structure::count(),
+                'stagiaires' => \App\Models\Stagiaire::count(),
+                'agents' => \App\Models\Agent::count(),
+            ];
+            
+            return Inertia::render('Dashboard/Admin', [
+                'stats' => $stats
+            ]);
+        })->name('dashboard');
+
+        // Autres routes admin...
         Route::get('/users', [UserController::class, 'index'])->name('users.index');
+        Route::post('/users', [UserController::class, 'store'])->name('users.store');
+        Route::put('/users/{user}', [UserController::class, 'update'])->name('users.update');
+        Route::delete('/users/{user}', [UserController::class, 'destroy'])->name('users.destroy');
+
         Route::get('/structures', [StructureController::class, 'index'])->name('structures.index');
+        Route::post('/structures', [StructureController::class, 'store'])->name('structures.store');
+        Route::put('/structures/{structure}', [StructureController::class, 'update'])->name('structures.update');
+        Route::delete('/structures/{structure}', [StructureController::class, 'destroy'])->name('structures.destroy');
+
         Route::get('/stagiaires', [StagiaireController::class, 'index'])->name('stagiaires.index');
+        
+        // Routes pour les agents
         Route::get('/agents', [AgentController::class, 'index'])->name('agents.index');
+        Route::post('/agents', [AgentController::class, 'store'])->name('agents.store');
+        Route::put('/agents/{agent}', [AgentController::class, 'update'])->name('agents.update');
+        Route::delete('/agents/{agent}', [AgentController::class, 'destroy'])->name('agents.destroy');
     });
     
     // Routes pour les demandes de stage
@@ -78,23 +102,25 @@ Route::middleware(['auth', 'verified'])->group(function () {
     // Routes pour les stagiaires
     Route::resource('stagiaires', StagiaireController::class);
     
-    // Routes pour les structures
-    Route::get('/structures', [StructureController::class, 'index'])->name('structures.index');
-    Route::post('/structures', [StructureController::class, 'store'])->name('structures.store');
-    Route::put('/structures/{structure}', [StructureController::class, 'update'])->name('structures.update');
-    Route::delete('/structures/{structure}', [StructureController::class, 'destroy'])->name('structures.destroy');
+    // Routes pour les agents DPAF
+    Route::prefix('agent')->name('agent.')->middleware(['auth', 'verified'])->group(function () {
+        Route::get('/dashboard', [App\Http\Controllers\Agent\DashboardController::class, 'index'])->name('dashboard');
+        Route::get('/demandes', [App\Http\Controllers\Agent\DemandeController::class, 'index'])->name('demandes');
+        Route::get('/demandes/{demande}', [App\Http\Controllers\Agent\DemandeController::class, 'show'])->name('demandes.show');
+        Route::post('/demandes/{demande}/approve', [App\Http\Controllers\Agent\DemandeController::class, 'approve'])->name('demandes.approve');
+        Route::post('/demandes/{demande}/reject', [App\Http\Controllers\Agent\DemandeController::class, 'reject'])->name('demandes.reject');
+        Route::get('/structures', [App\Http\Controllers\Agent\StructureController::class, 'index'])->name('structures');
+        Route::get('/structures/{structure}', [App\Http\Controllers\Agent\StructureController::class, 'show'])->name('structures.show');
+        Route::get('/stagiaires', [App\Http\Controllers\Agent\StagiaireController::class, 'index'])->name('stagiaires.index');
+        Route::get('/stagiaires/{stagiaire}', [App\Http\Controllers\Agent\StagiaireController::class, 'show'])->name('stagiaires.show');
+    });
     
-    // Routes pour les agents
-    Route::get('/agents', [AgentController::class, 'index'])->name('agents.index');
-    Route::post('/agents', [AgentController::class, 'store'])->name('agents.store');
-    Route::put('/agents/{agent}', [AgentController::class, 'update'])->name('agents.update');
-    Route::delete('/agents/{agent}', [AgentController::class, 'destroy'])->name('agents.destroy');
-    
-    // Routes pour les utilisateurs
-    Route::get('/users', [UserController::class, 'index'])->name('users.index');
-    Route::post('/users', [UserController::class, 'store'])->name('users.store');
-    Route::put('/users/{user}', [UserController::class, 'update'])->name('users.update');
-    Route::delete('/users/{user}', [UserController::class, 'destroy'])->name('users.destroy');
+    // Routes pour les stagiaires
+    Route::prefix('stagiaire')->name('stagiaire.')->middleware(['auth', 'verified'])->group(function () {
+        Route::get('/dashboard', [App\Http\Controllers\Stagiaire\DashboardController::class, 'index'])->name('dashboard');
+        Route::get('/demandes', [App\Http\Controllers\Stagiaire\DemandeController::class, 'index'])->name('demandes');
+        Route::get('/demandes/{demande}', [App\Http\Controllers\Stagiaire\DemandeController::class, 'show'])->name('demandes.show');
+    });
 });
 
 require __DIR__.'/auth.php';

@@ -8,9 +8,20 @@ use Inertia\Inertia;
 use App\Models\Agent;
 use App\Models\Stagiaire;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Str;
 
 class UserController extends Controller
 {
+    private function generateUniqueMatricule()
+    {
+        do {
+            // Génère un matricule au format AG-XXXXX (où X sont des chiffres)
+            $matricule = 'AG-' . str_pad(rand(1, 99999), 5, '0', STR_PAD_LEFT);
+        } while (Agent::where('matricule', $matricule)->exists());
+
+        return $matricule;
+    }
+
     public function index()
     {
         // Vérifiez si l'utilisateur est admin
@@ -22,6 +33,11 @@ class UserController extends Controller
 
         return Inertia::render('Users/Index', [
             'users' => $users,
+            'agent_roles' => [
+                'DPAF' => Agent::ROLE_DPAF,
+                'MS' => Agent::ROLE_MS,
+                'RS' => Agent::ROLE_RS,
+            ]
         ]);
     }
 
@@ -37,6 +53,10 @@ class UserController extends Controller
             'email' => 'required|email|max:255|unique:users,email',
             'role' => 'required|string',
             'password' => 'required|string|min:8|confirmed',
+            'matricule' => 'nullable|string',
+            'fonction' => 'nullable|string',
+            'date_embauche' => 'nullable|date',
+            'role_agent' => 'required_if:role,agent|string|in:DPAF,MS,RS',
         ]);
 
         $user = User::create([
@@ -50,17 +70,19 @@ class UserController extends Controller
         if ($validated['role'] === 'agent') {
             Agent::create([
                 'user_id' => $user->id,
-                'matricule' => 'Générer un matricule ici', // Ajoutez un matricule si nécessaire
-                'fonction' => 'Définir une fonction ici', // Ajoutez une fonction si nécessaire
+                'matricule' => $validated['matricule'] ?? $this->generateUniqueMatricule(),
+                'fonction' => $validated['fonction'] ?? 'À définir',
+                'date_embauche' => $validated['date_embauche'],
+                'role_agent' => $validated['role_agent'],
             ]);
         } 
         // Si le rôle est "stagiaire", créez une entrée dans la table `stagiaires`
         elseif ($validated['role'] === 'stagiaire') {
             Stagiaire::create([
                 'user_id' => $user->id,
-                'niveau_etude' => 'Définir un niveau d\'étude ici', // Ajoutez un niveau d'étude si nécessaire
-                'universite' => 'Définir une université ici', // Ajoutez une université si nécessaire
-                'filiere' => 'Définir une filière ici', // Ajoutez une filière si nécessaire
+                'niveau_etude' => 'À définir',
+                'universite' => 'À définir',
+                'filiere' => 'À définir',
             ]);
         }
 
@@ -74,6 +96,10 @@ class UserController extends Controller
             'email' => 'required|email|max:255|unique:users,email,' . $user->id,
             'role' => 'required|string',
             'password' => 'nullable|string|min:8|confirmed',
+            'matricule' => 'nullable|string',
+            'fonction' => 'nullable|string',
+            'date_embauche' => 'nullable|date',
+            'role_agent' => 'required_if:role,agent|string|in:DPAF,MS,RS',
         ]);
 
         $user->update([
@@ -83,13 +109,24 @@ class UserController extends Controller
             'password' => $validated['password'] ? bcrypt($validated['password']) : $user->password,
         ]);
 
+        // Mettre à jour ou créer l'agent si nécessaire
+        if ($validated['role'] === 'agent') {
+            $agent = Agent::firstOrNew(['user_id' => $user->id]);
+            $agent->fill([
+                'matricule' => $validated['matricule'] ?? $this->generateUniqueMatricule(),
+                'fonction' => $validated['fonction'] ?? 'À définir',
+                'date_embauche' => $validated['date_embauche'],
+                'role_agent' => $validated['role_agent'],
+            ])->save();
+        }
+
         return redirect()->route('users.index')->with('success', 'Utilisateur mis à jour avec succès.');
     }
 
     public function destroy(User $user)
     {
         // Vérifier si l'utilisateur n'est pas l'utilisateur connecté
-        if (auth()->id() === $user->id) {
+        if (Auth::id() === $user->id) {
             return redirect()->route('users.index')->with('error', 'Vous ne pouvez pas supprimer votre propre compte.');
         }
 

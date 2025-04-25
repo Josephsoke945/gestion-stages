@@ -308,7 +308,7 @@ function confirmDelete() {
 
 function submit() {
   if (editingId.value) {
-    form.put(route('structures.update', editingId.value), {
+    form.put(route('admin.structures.update', editingId.value), {
       preserveScroll: true,
       onSuccess: () => {
         closeModal();
@@ -332,7 +332,7 @@ function submit() {
       }
     });
   } else {
-    form.post(route('structures.store'), {
+    form.post(route('admin.structures.store'), {
       preserveScroll: true,
       onSuccess: () => {
         closeModal();
@@ -362,7 +362,7 @@ function destroy(id) {
   // Trouver la structure pour afficher son nom dans le message de confirmation
   const structure = props.structures.find(s => s.id === id);
   
-  router.delete(route('structures.destroy', id), {
+  router.delete(route('admin.structures.destroy', id), {
     onSuccess: () => {
       // Afficher un message personnalisé
       if (toast.value) {

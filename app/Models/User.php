@@ -85,4 +85,9 @@ public function membreGroupes()
     return $this->hasMany(MembreGroupe::class);
 }
 
+public function agent()
+{
+    return $this->hasOne(Agent::class);
+}
+
 }

@@ -32,7 +32,7 @@ class StructureController extends Controller
         // Créer la nouvelle structure
         Structure::create($validated);
 
-        return redirect()->route('structures.index')->with('success', 'Structure ajoutée avec succès.');
+        return redirect()->route('admin.structures.index')->with('success', 'Structure ajoutée avec succès.');
     }
 
     public function update(Request $request, Structure $structure)
@@ -47,13 +47,13 @@ class StructureController extends Controller
         // Mise à jour de la structure
         $structure->update($validated);
 
-        return redirect()->route('structures.index')->with('success', 'Structure mise à jour avec succès.');
+        return redirect()->route('admin.structures.index')->with('success', 'Structure mise à jour avec succès.');
     }
 
     public function destroy(Structure $structure)
     {
         $structure->delete();
 
-        return redirect()->route('structures.index')->with('success', 'Structure supprimée avec succès.');
+        return redirect()->route('admin.structures.index')->with('success', 'Structure supprimée avec succès.');
     }
 }

@@ -11,9 +11,8 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('stagiaires', function (Blueprint $table) {
-            // Ajouter la colonne niveau_etude
-            $table->string('niveau_etude', 50)->nullable()->after('user_id');
+        Schema::table('agents', function (Blueprint $table) {
+            //
         });
     }
 
@@ -22,9 +21,8 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('stagiaires', function (Blueprint $table) {
-            // Supprimer la colonne niveau_etude si elle existe
-            $table->dropColumn('niveau_etude');
+        Schema::table('agents', function (Blueprint $table) {
+            //
         });
     }
 };

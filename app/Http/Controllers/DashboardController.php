@@ -40,7 +40,7 @@ class DashboardController extends Controller
                 'stagiaires' => User::where('role', 'stagiaire')->count(),
                 'agents' => User::where('role', 'agent')->count(),
             ];
-            
+
             return inertia('Dashboard/Admin', [
                 'stats' => $stats
             ]);

@@ -11,12 +11,20 @@ class Agent extends Model
 {
     use HasFactory;
 
+    const ROLE_DPAF = 'DPAF';
+    const ROLE_MS = 'MS';
+    const ROLE_RS = 'RS';
+
     protected $fillable = [
         'user_id',
         'matricule',
         'fonction',
+        'role_agent',
         'date_embauche',
-        'universite_responsable_id', // Assurez-vous d'ajouter ce champ au fillable
+    ];
+
+    protected $casts = [
+        'date_embauche' => 'datetime',
     ];
 
     /**

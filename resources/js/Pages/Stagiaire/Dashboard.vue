@@ -1128,6 +1128,7 @@ const isMemberSelected = (userId) => {
     </div>
   </Stagiaire>
 </template>
+
 <style scoped>
 /* Styles de base */
 .btn-primary {
