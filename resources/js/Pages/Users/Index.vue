@@ -312,17 +312,15 @@ const form = useForm({
 
 function openModal(user = null) {
   if (user) {
-    // Mode modification
-    editingId.value = user.id;
     form.nom = user.nom;
     form.email = user.email;
     form.role = user.role;
     form.password = '';
     form.password_confirmation = '';
+    editingId.value = user.id;
   } else {
-    // Mode création
-    editingId.value = null;
     form.reset();
+    editingId.value = null;
   }
   showModal.value = true;
 }
@@ -354,7 +352,7 @@ function confirmDelete() {
 function submitForm() {
   if (editingId.value) {
     // Mise à jour d'un utilisateur existant
-    form.put(route('users.update', editingId.value), {
+    form.put(route('admin.users.update', editingId.value), {
       onSuccess: () => {
         closeModal();
         if (toast.value) {
@@ -377,7 +375,7 @@ function submitForm() {
     });
   } else {
     // Création d'un nouvel utilisateur
-    form.post(route('users.store'), {
+    form.post(route('admin.users.store'), {
       onSuccess: () => {
         closeModal();
         if (toast.value) {
@@ -405,7 +403,7 @@ function deleteUser(id) {
   // Trouver l'utilisateur pour afficher son nom dans le message de confirmation
   const user = props.users.find(u => u.id === id);
   
-  router.delete(route('users.destroy', id), {
+  router.delete(route('admin.users.destroy', id), {
     onSuccess: () => {
       if (toast.value) {
         toast.value.addToast({

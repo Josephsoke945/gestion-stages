@@ -51,12 +51,8 @@ class UserController extends Controller
         $validated = $request->validate([
             'nom' => 'required|string|max:255',
             'email' => 'required|email|max:255|unique:users,email',
-            'role' => 'required|string',
+            'role' => 'required|string|in:admin,agent,stagiaire',
             'password' => 'required|string|min:8|confirmed',
-            'matricule' => 'nullable|string',
-            'fonction' => 'nullable|string',
-            'date_embauche' => 'nullable|date',
-            'role_agent' => 'required_if:role,agent|string|in:DPAF,MS,RS',
         ]);
 
         $user = User::create([
@@ -66,14 +62,14 @@ class UserController extends Controller
             'password' => bcrypt($validated['password']),
         ]);
 
-        // Si le rôle est "agent", créez une entrée dans la table `agents`
+        // Si le rôle est "agent", créez une entrée de base dans la table `agents`
         if ($validated['role'] === 'agent') {
             Agent::create([
                 'user_id' => $user->id,
-                'matricule' => $validated['matricule'] ?? $this->generateUniqueMatricule(),
-                'fonction' => $validated['fonction'] ?? 'À définir',
-                'date_embauche' => $validated['date_embauche'],
-                'role_agent' => $validated['role_agent'],
+                'matricule' => $this->generateUniqueMatricule(),
+                'fonction' => 'À définir',
+                'role_agent' => 'DPAF', // Valeur par défaut, à modifier dans le formulaire des agents
+                'date_embauche' => now(),
             ]);
         } 
         // Si le rôle est "stagiaire", créez une entrée dans la table `stagiaires`
@@ -86,7 +82,7 @@ class UserController extends Controller
             ]);
         }
 
-        return redirect()->route('users.index')->with('success', 'Utilisateur ajouté avec succès.');
+        return redirect()->route('admin.users.index')->with('success', 'Utilisateur ajouté avec succès.');
     }
 
     public function update(Request $request, User $user)
@@ -94,14 +90,11 @@ class UserController extends Controller
         $validated = $request->validate([
             'nom' => 'required|string|max:255',
             'email' => 'required|email|max:255|unique:users,email,' . $user->id,
-            'role' => 'required|string',
+            'role' => 'required|string|in:admin,agent,stagiaire',
             'password' => 'nullable|string|min:8|confirmed',
-            'matricule' => 'nullable|string',
-            'fonction' => 'nullable|string',
-            'date_embauche' => 'nullable|date',
-            'role_agent' => 'required_if:role,agent|string|in:DPAF,MS,RS',
         ]);
 
+        // Mise à jour des informations de base de l'utilisateur
         $user->update([
             'nom' => $validated['nom'],
             'email' => $validated['email'],
@@ -109,29 +102,38 @@ class UserController extends Controller
             'password' => $validated['password'] ? bcrypt($validated['password']) : $user->password,
         ]);
 
-        // Mettre à jour ou créer l'agent si nécessaire
-        if ($validated['role'] === 'agent') {
-            $agent = Agent::firstOrNew(['user_id' => $user->id]);
-            $agent->fill([
-                'matricule' => $validated['matricule'] ?? $this->generateUniqueMatricule(),
-                'fonction' => $validated['fonction'] ?? 'À définir',
-                'date_embauche' => $validated['date_embauche'],
-                'role_agent' => $validated['role_agent'],
-            ])->save();
+        // Si le nouveau rôle est "agent" et l'utilisateur n'était pas un agent avant
+        if ($validated['role'] === 'agent' && !$user->agent) {
+            Agent::create([
+                'user_id' => $user->id,
+                'matricule' => $this->generateUniqueMatricule(),
+                'fonction' => 'À définir',
+                'role_agent' => 'DPAF',
+                'date_embauche' => now(),
+            ]);
+        }
+        // Si le nouveau rôle est "stagiaire" et l'utilisateur n'était pas un stagiaire avant
+        elseif ($validated['role'] === 'stagiaire' && !$user->stagiaire) {
+            Stagiaire::create([
+                'user_id' => $user->id,
+                'niveau_etude' => 'À définir',
+                'universite' => 'À définir',
+                'filiere' => 'À définir',
+            ]);
         }
 
-        return redirect()->route('users.index')->with('success', 'Utilisateur mis à jour avec succès.');
+        return redirect()->route('admin.users.index')->with('success', 'Utilisateur mis à jour avec succès.');
     }
 
     public function destroy(User $user)
     {
         // Vérifier si l'utilisateur n'est pas l'utilisateur connecté
         if (Auth::id() === $user->id) {
-            return redirect()->route('users.index')->with('error', 'Vous ne pouvez pas supprimer votre propre compte.');
+            return redirect()->route('admin.users.index')->with('error', 'Vous ne pouvez pas supprimer votre propre compte.');
         }
 
         $user->delete();
 
-        return redirect()->route('users.index')->with('success', 'Utilisateur supprimé avec succès.');
+        return redirect()->route('admin.users.index')->with('success', 'Utilisateur supprimé avec succès.');
     }
 }

@@ -151,7 +151,7 @@ function submit() {
   }
   
   if (editingId.value) {
-    form.put(route('agents.update', editingId.value), {
+    form.put(route('admin.agents.update', editingId.value), {
       preserveScroll: true,
       onSuccess: () => {
         closeModal();
@@ -175,7 +175,7 @@ function submit() {
       }
     });
   } else {
-    form.post(route('agents.store'), {
+    form.post(route('admin.agents.store'), {
       preserveScroll: true,
       onSuccess: () => {
         closeModal();
