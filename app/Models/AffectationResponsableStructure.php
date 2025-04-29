@@ -18,6 +18,7 @@ class AffectationResponsableStructure extends Model
         'date_affectation',
         'date_fin_affectation',
         'poste',
+        'id_demande_stages',
     ];
 
     protected $casts = [
@@ -39,6 +40,14 @@ class AffectationResponsableStructure extends Model
     public function responsable(): BelongsTo
     {
         return $this->belongsTo(User::class, 'responsable_id');
+    }
+
+    /**
+     * Get the demande de stage associated with this affectation.
+     */
+    public function demandeStage(): BelongsTo
+    {
+        return $this->belongsTo(DemandeStage::class, 'id_demande_stages');
     }
 
     // Définir d'autres relations Eloquent ici ultérieurement

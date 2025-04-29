@@ -76,4 +76,12 @@ class DemandeStage extends Model
     {
         return $this->hasMany(MembreGroupe::class, 'demande_stage_id');
     }
+
+    /**
+     * Relation avec les affectations de responsables de structure
+     */
+    public function affectations()
+    {
+        return $this->hasMany(AffectationResponsableStructure::class, 'demande_id');
+    }
 }

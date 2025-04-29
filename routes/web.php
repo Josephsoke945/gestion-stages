@@ -109,6 +109,7 @@ Route::get('/dashboard', function () {
         Route::get('/demandes/{demande}', [App\Http\Controllers\Agent\DemandeController::class, 'show'])->name('demandes.show');
         Route::post('/demandes/{demande}/approve', [App\Http\Controllers\Agent\DemandeController::class, 'approve'])->name('demandes.approve');
         Route::post('/demandes/{demande}/reject', [App\Http\Controllers\Agent\DemandeController::class, 'reject'])->name('demandes.reject');
+        Route::post('/demandes/{demande}/affecter', [App\Http\Controllers\Agent\DemandeController::class, 'affecter'])->name('demandes.affecter');
         Route::get('/structures', [App\Http\Controllers\Agent\StructureController::class, 'index'])->name('structures');
         Route::get('/structures/{structure}', [App\Http\Controllers\Agent\StructureController::class, 'show'])->name('structures.show');
         Route::get('/stagiaires', [App\Http\Controllers\Agent\StagiaireController::class, 'index'])->name('stagiaires.index');
