@@ -858,7 +858,7 @@ watch(() => form.type, (newType) => {
                   <span v-if="form.errors.universite" class="error-msg">{{ form.errors.universite }}</span>
                 </div>
                 <div class="form-group">
-                  <label class="required">Specialité</label>
+                  <label class="required">Filiere</label>
                   <input v-model="form.filiere" type="text" class="form-input">
                 </div>
                 <div class="form-group">
@@ -904,7 +904,7 @@ watch(() => form.type, (newType) => {
           <!-- Étape 3 (Téléchargement des pièces) -->
           <div v-if="step === 3" class="step-content">
             <div class="form-section">
-              <h3 class="section-title">Pièces justificatives requises</h3>
+              <h3 class="section-title">Documents </h3>
               <div v-if="form.type === 'Académique'">
                 <p class="mb-3">Pour une demande académique, veuillez fournir :</p>
                 <div class="form-group">
@@ -994,7 +994,7 @@ watch(() => form.type, (newType) => {
 
             <!-- Informations des participants (demandeur principal et membres) -->
             <div class="form-section mt-4">
-              <h3 class="section-title">Participants</h3>
+              <h3 class="section-title">Membre du groupe</h3>
 
               <!-- Demandeur principal -->
               <div class="confirmation-item mb-4">

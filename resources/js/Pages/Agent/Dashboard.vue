@@ -76,33 +76,7 @@
                     </div>
                 </div>
 
-                <!-- Structures gérées -->
-                <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
-                    <div class="p-6 bg-white border-b border-gray-200">
-                        <div class="flex justify-between items-center mb-4">
-                            <h3 class="text-lg font-semibold text-gray-900">Structures gérées</h3>
-                            <Link :href="route('agent.structures')" class="text-blue-600 hover:text-blue-800">
-                                Voir tout
-                            </Link>
-                        </div>
-                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                            <div v-for="structure in structures" :key="structure.id" 
-                                class="border rounded-lg p-4 hover:shadow-md transition-shadow">
-                                <h4 class="font-semibold text-lg mb-2">{{ structure.libelle }}</h4>
-                                <p class="text-gray-600 text-sm mb-2">{{ structure.description }}</p>
-                                <div class="flex justify-between items-center">
-                                    <span class="text-sm text-gray-500">
-                                        {{ structure.stagiaires_count }} stagiaires
-                                    </span>
-                                    <Link :href="route('agent.structures.show', structure.id)" 
-                                        class="text-blue-600 hover:text-blue-800 text-sm">
-                                        Détails
-                                    </Link>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+                
             </div>
         </div>
     </AgentDPAF>

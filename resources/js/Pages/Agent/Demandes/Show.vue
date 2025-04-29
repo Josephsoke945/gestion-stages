@@ -45,7 +45,7 @@ const submit = (action) => {
                 <div class="overflow-hidden bg-white shadow-sm sm:rounded-lg">
                     <div class="p-6">
                         <div class="mb-6 flex justify-between items-center">
-                            <h1 class="text-2xl font-bold text-gray-800">Détails de la demande #{{ demande.id }}</h1>
+                            <h1 class="text-2xl font-bold text-gray-800">Détails de la demande #{{ demande.code_suivi }}</h1>
                             <Link :href="route('agent.demandes')" class="px-4 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300 transition-colors flex items-center gap-2">
                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
                                     <path fill-rule="evenodd" d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l4.293 4.293a1 1 0 010 1.414z" clip-rule="evenodd" />
@@ -159,7 +159,7 @@ const submit = (action) => {
                         </div>
 
                         <!-- Actions sur la demande -->
-                        <div class="mt-6 bg-gray-50 p-6 rounded-lg shadow-sm">
+                       <!--  <div class="mt-6 bg-gray-50 p-6 rounded-lg shadow-sm">
                             <h2 class="text-xl font-semibold mb-4 text-gray-800 border-b pb-2">Actions</h2>
                             
                             <div class="flex gap-4">
@@ -186,7 +186,7 @@ const submit = (action) => {
                                     </button>
                                 </form>
                             </div>
-                        </div>
+                        </div> -->
                     </div>
                 </div>
             </div>

@@ -7,17 +7,20 @@ import debounce from 'lodash/debounce';
 
 const props = defineProps({
     demandes: Object,
-    filters: Object
+    filters: Object,
+    structures: Array
 });
 
 const search = ref(props.filters?.search || '');
 const status = ref(props.filters?.status || '');
+const structure_id = ref(props.filters?.structure_id || '');
 
 // Debounced search function
 const debouncedSearch = debounce(() => {
     router.get(route('agent.demandes'), { 
         search: search.value,
-        status: status.value
+        status: status.value,
+        structure_id: structure_id.value
     }, {
         preserveState: true,
         preserveScroll: true
@@ -27,6 +30,7 @@ const debouncedSearch = debounce(() => {
 // Watch for changes in filters
 watch(search, debouncedSearch);
 watch(status, debouncedSearch);
+watch(structure_id, debouncedSearch);
 
 const statusOptions = [
     { value: '', label: 'Tous les statuts' },
@@ -72,6 +76,20 @@ const formatDate = (date) => {
                                     </option>
                                 </select>
                             </div>
+                            <div class="w-full sm:w-64">
+                                <select
+                                    v-model="structure_id"
+                                    class="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50"
+                                >
+                                    <option value="">Toutes les structures</option>
+                                    <option v-for="structure in structures" :key="structure.id" :value="structure.id">
+                                        {{ structure.libelle }}
+                                    </option>
+                                </select>
+                                <div v-if="!structures || structures.length === 0" class="text-sm text-gray-500 mt-1">
+                                    Chargement des structures...
+                                </div>
+                            </div>
                         </div>
 
                         <div class="overflow-x-auto">
@@ -101,7 +119,7 @@ const formatDate = (date) => {
                                         </td>
                                         <td class="px-6 py-4 whitespace-nowrap">{{ formatDate(demande.created_at) }}</td>
                                         <td class="px-6 py-4 whitespace-nowrap">
-                                            <div class="text-sm text-gray-900">{{ demande.structure.libelle }}</div>
+                                            <div class="text-sm text-gray-900">{{ demande.structure ? demande.structure.libelle : 'Non spécifiée' }}</div>
                                         </td>
                                         <td class="px-6 py-4 whitespace-nowrap">
                                             <span :class="{
@@ -142,17 +160,27 @@ const formatDate = (date) => {
                                 Affichage de {{ demandes.from }} à {{ demandes.to }} sur {{ demandes.total }} résultats
                             </div>
                             <div class="flex gap-1">
-                                <Link v-for="(link, i) in demandes.links" 
-                                    :key="i"
-                                    :href="link.url"
-                                    v-html="link.label"
-                                    class="px-3 py-1 rounded"
-                                    :class="{
-                                        'bg-blue-600 text-white': link.active,
-                                        'text-gray-700 hover:bg-gray-100': !link.active,
-                                        'opacity-50 cursor-not-allowed': !link.url
-                                    }"
-                                />
+                                <template v-for="(link, i) in demandes.links" :key="i">
+                                    <Link v-if="link.url"
+                                        :href="link.url"
+                                        class="px-3 py-1 rounded"
+                                        :class="{
+                                            'bg-blue-600 text-white': link.active,
+                                            'text-gray-700 hover:bg-gray-100': !link.active
+                                        }"
+                                    >
+                                        <span v-if="link.label === '&laquo; Previous'">← Précédent</span>
+                                        <span v-else-if="link.label === 'Next &raquo;'">Suivant →</span>
+                                        <span v-else>{{ link.label }}</span>
+                                    </Link>
+                                    <span v-else
+                                        class="px-3 py-1 rounded text-gray-400 cursor-not-allowed"
+                                    >
+                                        <span v-if="link.label === '&laquo; Previous'">← Précédent</span>
+                                        <span v-else-if="link.label === 'Next &raquo;'">Suivant →</span>
+                                        <span v-else>{{ link.label }}</span>
+                                    </span>
+                                </template>
                             </div>
                         </div>
                     </div>

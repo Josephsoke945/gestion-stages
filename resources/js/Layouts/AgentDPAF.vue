@@ -20,9 +20,9 @@
                             <NavLink :href="route('agent.demandes')" :active="route().current('agent.demandes')">
                                 Demandes de stage
                             </NavLink>
-                            <NavLink :href="route('agent.structures')" :active="route().current('agent.structures')">
+                            <!-- <NavLink :href="route('agent.structures')" :active="route().current('agent.structures')">
                                 Structures
-                            </NavLink>
+                            </NavLink> -->
                         </div>
                     </div>
 

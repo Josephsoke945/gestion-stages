@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Agent;
 
 use App\Http\Controllers\Controller;
 use App\Models\DemandeStage;
+use App\Models\Structure;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Illuminate\Support\Facades\Log;
@@ -46,12 +47,29 @@ class DemandeController extends Controller
                 $query->where('statut', $request->status);
             }
 
+            // Filtre par structure
+            if ($request->filled('structure_id')) {
+                $query->where('structure_id', $request->structure_id);
+            }
+
             $demandes = $query->paginate(10)
                 ->withQueryString();
 
+            // Récupérer toutes les structures pour le filtre
+            $structures = Structure::select('id', 'libelle', 'sigle')
+                ->orderBy('libelle')
+                ->get()
+                ->map(function($structure) {
+                    return [
+                        'id' => $structure->id,
+                        'libelle' => $structure->sigle ? $structure->sigle . ' - ' . $structure->libelle : $structure->libelle
+                    ];
+                });
+
             return Inertia::render('Agent/Demandes/Index', [
                 'demandes' => $demandes,
-                'filters' => $request->only(['search', 'status'])
+                'structures' => $structures,
+                'filters' => $request->only(['search', 'status', 'structure_id'])
             ]);
 
         } catch (\Exception $e) {
@@ -59,12 +77,14 @@ class DemandeController extends Controller
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString(),
                 'search' => $request->search,
-                'status' => $request->status
+                'status' => $request->status,
+                'structure_id' => $request->structure_id
             ]);
 
             return Inertia::render('Agent/Demandes/Index', [
                 'demandes' => [],
-                'filters' => $request->only(['search', 'status']),
+                'structures' => [],
+                'filters' => $request->only(['search', 'status', 'structure_id']),
                 'error' => 'Une erreur est survenue lors de la recherche.'
             ]);
         }
