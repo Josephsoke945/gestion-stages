@@ -78,7 +78,7 @@
         
         <p><strong>Détails de la demande :</strong></p>
         <ul>
-            <li>Structure demandée : {{ $structure }}</li>
+            <li>Structure demandée : {{ $structure ?? 'Non spécifiée' }}</li>
             <li>Date de la demande : {{ $dateDemande }}</li>
             <li>Date d'annulation : {{ $dateAnnulation }}</li>
         </ul>

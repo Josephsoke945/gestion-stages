@@ -50,6 +50,7 @@ class DemandeStage extends Model
         'date_debut' => 'date',
         'date_fin' => 'date',
         'date_soumission' => 'datetime',
+        'structure_id' => 'integer',
     ];
     
     /**
