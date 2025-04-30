@@ -1,14 +1,41 @@
 <script setup>
 import { Link } from '@inertiajs/vue3';
-import { ref, watch, computed } from 'vue';
-import { router } from '@inertiajs/vue3';
+import { ref, watch, computed, onMounted } from 'vue';
+import { router, usePage } from '@inertiajs/vue3';
 import AgentDPAF from '@/Layouts/AgentDPAF.vue';
+import AdminToast from '@/Components/AdminToast.vue';
 import debounce from 'lodash/debounce';
 
 const props = defineProps({
     demandes: Object,
     filters: Object,
     structures: Array
+});
+
+const page = usePage();
+const toast = ref(null);
+
+// Surveiller les messages flash et les afficher automatiquement
+onMounted(() => {
+    setTimeout(() => {
+        const { flash } = page.props;
+        if (flash) {
+            if (flash.success && toast.value) {
+                toast.value.addToast({
+                    type: 'success',
+                    title: 'Succès',
+                    message: flash.success
+                });
+            }
+            if (flash.error && toast.value) {
+                toast.value.addToast({
+                    type: 'error',
+                    title: 'Erreur',
+                    message: flash.error
+                });
+            }
+        }
+    }, 100);
 });
 
 const search = ref(props.filters?.search || '');
@@ -95,22 +122,36 @@ const closeAffectationModal = () => {
 const submitDirectGroupAffectation = () => {
     if (selectedDemandes.value.length === 0) return;
 
-    // Récupérer les demandes sélectionnées avec leurs structures
     const demandesWithStructures = props.demandes.data
         .filter(d => selectedDemandes.value.includes(d.id))
         .filter(d => d.structure);
 
-    // Créer un tableau de promesses pour chaque affectation
     const promises = demandesWithStructures.map(demande => {
         return router.post(route('agent.demandes.affecter', demande.id), {
             structure_id: demande.structure.id
         });
     });
 
-    // Exécuter toutes les promesses
-    Promise.all(promises).then(() => {
-        selectedDemandes.value = [];
-    });
+    Promise.all(promises)
+        .then(() => {
+            selectedDemandes.value = [];
+            if (toast.value) {
+                toast.value.addToast({
+                    type: 'success',
+                    title: 'Succès',
+                    message: 'Les demandes ont été affectées avec succès'
+                });
+            }
+        })
+        .catch(() => {
+            if (toast.value) {
+                toast.value.addToast({
+                    type: 'error',
+                    title: 'Erreur',
+                    message: 'Une erreur est survenue lors de l\'affectation groupée'
+                });
+            }
+        });
 };
 
 // Fonction pour soumettre l'affectation
@@ -122,8 +163,24 @@ const submitAffectation = () => {
         router.post(route('agent.demandes.affecter', selectedDemande.value.id), {
             structure_id: selectedStructureId.value
         }, {
-            onSuccess: () => {
+            onSuccess: (response) => {
                 closeAffectationModal();
+                if (toast.value) {
+                    toast.value.addToast({
+                        type: 'success',
+                        title: 'Succès',
+                        message: 'La demande a été affectée avec succès'
+                    });
+                }
+            },
+            onError: (errors) => {
+                if (toast.value) {
+                    toast.value.addToast({
+                        type: 'error',
+                        title: 'Erreur',
+                        message: 'Une erreur est survenue lors de l\'affectation'
+                    });
+                }
             }
         });
     } else {
@@ -131,6 +188,17 @@ const submitAffectation = () => {
         submitDirectGroupAffectation();
     }
 };
+
+// Computed property pour vérifier si des demandes sont sélectionnées
+const hasSelectedDemandes = computed(() => selectedDemandes.value.length > 0);
+
+// Computed property pour vérifier si les demandes sélectionnées peuvent être affectées
+const canAffectSelectedDemandes = computed(() => {
+    return selectedDemandes.value.length > 0 && 
+           props.demandes.data
+               .filter(d => selectedDemandes.value.includes(d.id))
+               .every(d => d.statut === 'En attente');
+});
 </script>
 
 <template>
@@ -182,14 +250,20 @@ const submitAffectation = () => {
                         </div>
 
                         <!-- Actions pour les demandes sélectionnées -->
-                        <div v-if="selectedDemandes.length > 0" class="mb-4 p-4 bg-gray-50 rounded-lg">
+                        <div v-if="hasSelectedDemandes" class="mb-4 p-4 bg-gray-50 rounded-lg">
                             <div class="flex items-center justify-between">
                                 <span class="text-sm text-gray-700">
                                     {{ selectedDemandes.length }} demande(s) sélectionnée(s)
                                 </span>
                                 <button 
                                     @click="submitDirectGroupAffectation"
-                                    class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors flex items-center gap-2"
+                                    :disabled="!canAffectSelectedDemandes"
+                                    :class="[
+                                        'px-4 py-2 rounded transition-colors flex items-center gap-2',
+                                        canAffectSelectedDemandes 
+                                            ? 'bg-blue-600 text-white hover:bg-blue-700' 
+                                            : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                                    ]"
                                 >
                                     <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
                                         <path d="M8 9a3 3 0 100-6 3 3 0 000 6zM8 11a6 6 0 016 6H2a6 6 0 016-6zM16 7a1 1 0 10-2 0v1h-1a1 1 0 100 2h1v1a1 1 0 102 0v-1h1a1 1 0 100-2h-1V7z"/>
@@ -375,4 +449,7 @@ const submitAffectation = () => {
             </div>
         </div>
     </AgentDPAF>
+    
+    <!-- Ajout du composant Toast -->
+    <AdminToast ref="toast" />
 </template> 

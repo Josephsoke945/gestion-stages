@@ -143,16 +143,59 @@ const getStatusColor = (statut) => {
               </div>
             </div>
             
-            <!-- Document attaché (si disponible) -->
-            <div v-if="demande.lettre_cv_path" class="mt-6 bg-gray-50 p-6 rounded-lg shadow-sm">
-              <h2 class="text-xl font-semibold mb-4 text-gray-800 border-b pb-2">Document attaché</h2>
+            <!-- Documents attachés -->
+            <div v-if="demande.lettre_cv_path || demande.diplomes_path" class="mt-6 bg-gray-50 p-6 rounded-lg shadow-sm">
+              <h2 class="text-xl font-semibold mb-4 text-gray-800 border-b pb-2">Documents attachés</h2>
               
-              <a :href="'/storage/' + demande.lettre_cv_path" target="_blank" class="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                  <path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clip-rule="evenodd" />
-                </svg>
-                Télécharger le document
-              </a>
+              <div class="space-y-4">
+                <!-- Documents pour demande académique -->
+                <div v-if="demande.type === 'Académique' && demande.lettre_cv_path" class="flex items-center justify-between bg-white p-4 rounded-lg border">
+                  <div>
+                    <h3 class="font-medium text-gray-900">Lettre de recommandation</h3>
+                    <p class="text-sm text-gray-500">Document de recommandation académique</p>
+                  </div>
+                  <a :href="'/storage/' + demande.lettre_cv_path" target="_blank" 
+                    class="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                      <path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clip-rule="evenodd" />
+                    </svg>
+                    Télécharger la lettre
+                  </a>
+                </div>
+
+                <!-- Documents pour demande professionnelle -->
+                <template v-if="demande.type === 'Professionnelle'">
+                  <!-- CV et Lettre de motivation -->
+                  <div v-if="demande.lettre_cv_path" class="flex items-center justify-between bg-white p-4 rounded-lg border">
+                    <div>
+                      <h3 class="font-medium text-gray-900">CV et Lettre de motivation</h3>
+                      <p class="text-sm text-gray-500">Documents principaux de la candidature</p>
+                    </div>
+                    <a :href="'/storage/' + demande.lettre_cv_path" target="_blank" 
+                      class="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors">
+                      <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clip-rule="evenodd" />
+                      </svg>
+                      Télécharger CV et Lettre
+                    </a>
+                  </div>
+
+                  <!-- Diplômes -->
+                  <div v-if="demande.diplomes_path" class="flex items-center justify-between bg-white p-4 rounded-lg border">
+                    <div>
+                      <h3 class="font-medium text-gray-900">Diplômes</h3>
+                      <p class="text-sm text-gray-500">Documents justificatifs des diplômes</p>
+                    </div>
+                    <a :href="'/storage/' + demande.diplomes_path" target="_blank" 
+                      class="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors">
+                      <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clip-rule="evenodd" />
+                      </svg>
+                      Télécharger les diplômes
+                    </a>
+                  </div>
+                </template>
+              </div>
             </div>
           </div>
         </div>

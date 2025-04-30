@@ -319,7 +319,7 @@ const voirDetails = (demandeId) => {
                         v-text="link.label"
                       />
                       <Link v-else
-                        :href="link.url"
+                        :href="link.url" 
                         class="relative inline-flex items-center px-4 py-2 border text-sm font-medium"
                         :class="[
                           link.active 
@@ -332,28 +332,28 @@ const voirDetails = (demandeId) => {
                   </nav>
                 </div>
               </div>
-
+              
               <!-- Version mobile de la pagination -->
               <div class="flex items-center justify-between sm:hidden">
                 <template v-if="demandes.prev_page_url">
-                  <Link
-                    :href="demandes.prev_page_url"
+                <Link 
+                  :href="demandes.prev_page_url" 
                     class="relative inline-flex items-center px-4 py-2 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
-                  >
-                    Précédent
-                  </Link>
+                >
+                  Précédent
+                </Link>
                 </template>
                 <div v-else class="relative inline-flex items-center px-4 py-2 text-sm font-medium rounded-md text-gray-400 bg-gray-100 cursor-not-allowed">
                   Précédent
                 </div>
-
+                
                 <template v-if="demandes.next_page_url">
-                  <Link
-                    :href="demandes.next_page_url"
+                <Link 
+                  :href="demandes.next_page_url" 
                     class="ml-3 relative inline-flex items-center px-4 py-2 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
-                  >
-                    Suivant
-                  </Link>
+                >
+                  Suivant
+                </Link>
                 </template>
                 <div v-else class="ml-3 relative inline-flex items-center px-4 py-2 text-sm font-medium rounded-md text-gray-400 bg-gray-100 cursor-not-allowed">
                   Suivant
