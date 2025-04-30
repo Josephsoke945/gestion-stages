@@ -13,7 +13,6 @@ return new class extends Migration
     {
         Schema::create('structures', function (Blueprint $table) {
             $table->id();
-            $table->string('nom');
             $table->foreignId('responsable_id')
                 ->nullable()
                 ->constrained('users') // Pointe vers la table 'users'

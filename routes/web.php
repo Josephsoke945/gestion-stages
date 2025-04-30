@@ -24,8 +24,8 @@ Route::get('/', function () {
 
 Route::middleware(['auth', 'verified'])->group(function () {
     // Redirection du dashboard principal vers le dashboard approprié
-Route::get('/dashboard', function () {
-    $user = Auth::user();
+    Route::get('/dashboard', function () {
+        $user = Auth::user();
 
         if ($user->role === 'admin') {
             return redirect()->route('admin.dashboard');
@@ -37,7 +37,7 @@ Route::get('/dashboard', function () {
 
         if ($user->role === 'stagiaire') {
             return redirect()->route('stagiaire.dashboard');
-    }
+        }
 
         // Redirection par défaut
         return redirect()->route('login');
@@ -74,6 +74,9 @@ Route::get('/dashboard', function () {
         Route::post('/structures', [StructureController::class, 'store'])->name('structures.store');
         Route::put('/structures/{structure}', [StructureController::class, 'update'])->name('structures.update');
         Route::delete('/structures/{structure}', [StructureController::class, 'destroy'])->name('structures.destroy');
+
+        // Ajout de la route pour récupérer les structures disponibles
+        Route::get('/structures/available', [StructureController::class, 'available'])->name('structures.available');
 
         Route::get('/stagiaires', [StagiaireController::class, 'index'])->name('stagiaires.index');
         
