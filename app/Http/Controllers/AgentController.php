@@ -32,22 +32,28 @@ class AgentController extends Controller
 
     public function store(Request $request)
     {
-        $validated = $request->validate([
-            'nom'                         => 'required|string|max:255',
-            'prenom'                      => 'required|string|max:255',
-            'email'                       => 'required|email|unique:users,email',
-            'password'                    => 'required|string|min:8',
-            'telephone'                   => 'required|integer',
-            'date_de_naissance'          => 'required|date',
-            'sexe'                        => 'required|in:Homme,Femme',
-            'matricule'                   => 'required|string|unique:agents',
-            'fonction'                    => 'required|string',
-            'role_agent'                 => 'required|string|in:DPAF,MS,RS',
-            'structure_selectionnee_id'  => 'required_if:role_agent,RS|exists:structures,id|unique:structures,responsable_id',
-            'date_embauche'              => 'nullable|date',
-        ], [
-            'structure_selectionnee_id.required_if' => 'Une structure doit être sélectionnée pour un responsable.',
-            'structure_selectionnee_id.unique'      => 'Cette structure a déjà un responsable.',
+        $rules = [
+            'nom'               => 'required|string|max:255',
+            'prenom'            => 'required|string|max:255',
+            'email'             => 'required|email|unique:users,email',
+            'password'          => 'required|string|min:8',
+            'telephone'         => 'required|integer',
+            'date_de_naissance' => 'required|date',
+            'sexe'              => 'required|in:Homme,Femme',
+            'matricule'         => 'required|string|unique:agents',
+            'fonction'          => 'required|string',
+            'role_agent'        => 'required|string|in:DPAF,MS,RS',
+            'date_embauche'     => 'nullable|date',
+        ];
+
+        // Ajouter validation spécifique si le rôle est RS
+        if ($request->role_agent === 'RS') {
+            $rules['structure_selectionnee_id'] = 'required|exists:structures,id|unique:structures,responsable_id';
+        }
+
+        $validated = $request->validate($rules, [
+            'structure_selectionnee_id.required' => 'Une structure doit être sélectionnée pour un responsable.',
+            'structure_selectionnee_id.unique'   => 'Cette structure a déjà un responsable.',
         ]);
 
         $user = User::create([
@@ -69,7 +75,8 @@ class AgentController extends Controller
             'date_embauche' => $validated['date_embauche'],
         ]);
 
-        if ($validated['role_agent'] === 'RS') {
+        // Mise à jour structure uniquement si RS
+        if ($validated['role_agent'] === 'RS' && isset($validated['structure_selectionnee_id'])) {
             Structure::where('id', $validated['structure_selectionnee_id'])
                 ->update(['responsable_id' => $agent->id]);
         }
@@ -79,22 +86,27 @@ class AgentController extends Controller
 
     public function update(Request $request, Agent $agent)
     {
-        $validated = $request->validate([
-            'nom'                         => 'required|string|max:255',
-            'prenom'                      => 'required|string|max:255',
-            'email'                       => 'required|email|unique:users,email,' . $agent->user_id,
-            'telephone'                   => 'required|integer',
-            'date_de_naissance'          => 'required|date',
-            'sexe'                        => 'required|in:Homme,Femme',
-            'matricule'                   => 'required|string|unique:agents,matricule,' . $agent->id,
-            'fonction'                    => 'required|string',
-            'role_agent'                 => 'required|string|in:DPAF,MS,RS',
-            'structure_selectionnee_id'  => 'required_if:role_agent,RS|exists:structures,id|unique:structures,responsable_id,' . $agent->id,
-            'date_embauche'              => 'nullable|date',
-            'password'                    => 'nullable|string|min:8',
-        ], [
-            'structure_selectionnee_id.required_if' => 'Une structure doit être sélectionnée pour un responsable.',
-            'structure_selectionnee_id.unique'      => 'Cette structure a déjà un responsable.',
+        $rules = [
+            'nom'               => 'required|string|max:255',
+            'prenom'            => 'required|string|max:255',
+            'email'             => 'required|email|unique:users,email,' . $agent->user_id,
+            'telephone'         => 'required|integer',
+            'date_de_naissance' => 'required|date',
+            'sexe'              => 'required|in:Homme,Femme',
+            'matricule'         => 'required|string|unique:agents,matricule,' . $agent->id,
+            'fonction'          => 'required|string',
+            'role_agent'        => 'required|string|in:DPAF,MS,RS',
+            'date_embauche'     => 'nullable|date',
+            'password'          => 'nullable|string|min:8',
+        ];
+
+        if ($request->role_agent === 'RS') {
+            $rules['structure_selectionnee_id'] = 'required|exists:structures,id|unique:structures,responsable_id,' . $agent->id;
+        }
+
+        $validated = $request->validate($rules, [
+            'structure_selectionnee_id.required' => 'Une structure doit être sélectionnée pour un responsable.',
+            'structure_selectionnee_id.unique'   => 'Cette structure a déjà un responsable.',
         ]);
 
         $userData = [
@@ -112,6 +124,8 @@ class AgentController extends Controller
 
         $agent->user->update($userData);
 
+        $ancienRole = $agent->role_agent;
+
         $agent->update([
             'matricule'     => $validated['matricule'],
             'fonction'      => $validated['fonction'],
@@ -119,9 +133,15 @@ class AgentController extends Controller
             'date_embauche' => $validated['date_embauche'],
         ]);
 
-        if ($validated['role_agent'] === 'RS') {
+        // Cas 1 : le nouvel agent est RS
+        if ($validated['role_agent'] === 'RS' && isset($validated['structure_selectionnee_id'])) {
             Structure::where('id', $validated['structure_selectionnee_id'])
                 ->update(['responsable_id' => $agent->id]);
+        }
+
+        // Cas 2 : il n'est plus RS, on le supprime de sa structure
+        if ($ancienRole === 'RS' && $validated['role_agent'] !== 'RS') {
+            Structure::where('responsable_id', $agent->id)->update(['responsable_id' => null]);
         }
 
         return redirect()->back()->with('success', 'Agent mis à jour avec succès.');
@@ -129,7 +149,10 @@ class AgentController extends Controller
 
     public function destroy(Agent $agent)
     {
+        // Supprimer aussi son lien s’il est RS
+        Structure::where('responsable_id', $agent->id)->update(['responsable_id' => null]);
         $agent->user->delete();
+
         return redirect()->back()->with('success', 'Agent supprimé avec succès.');
     }
 }

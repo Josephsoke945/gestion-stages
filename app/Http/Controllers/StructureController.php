@@ -15,7 +15,7 @@ class StructureController extends Controller
     {
         $structures = Structure::with('responsable')->get();
 
-        return Inertia::render('Admin/Structures/Index', [
+        return Inertia::render('Structures/Index', [
             'structures' => $structures,
         ]);
     }
