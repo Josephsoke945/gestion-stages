@@ -14,7 +14,6 @@ class Structure extends Model
     protected $fillable = [
         'sigle',
         'libelle',
-        'nom',
         'responsable_id',
         'description',
     ];
@@ -22,7 +21,7 @@ class Structure extends Model
     /**
      * Relation avec le responsable (uniquement les utilisateurs ayant le rôle 'Agent').
      */
-    public function responsable()
+    public function responsable(): BelongsTo
     {
         return $this->belongsTo(User::class, 'responsable_id')->where('role', 'Agent');
     }
@@ -41,6 +40,14 @@ class Structure extends Model
     public function demandesAttestation(): HasMany
     {
         return $this->hasMany(DemandeAttestation::class); // Assurez-vous que la clé étrangère 'structure_id' existe dans DemandeAttestation si nécessaire
+    }
+
+    /**
+     * Get all the stagiaires assigned to this structure.
+     */
+    public function stagiaires(): HasMany
+    {
+        return $this->hasMany(Stagiaire::class);
     }
 
     // Définir d'autres relations Eloquent ici ultérieurement

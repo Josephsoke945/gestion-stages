@@ -21,6 +21,7 @@ class Agent extends Model
         'fonction',
         'role_agent',
         'date_embauche',
+        'structure_id', // Ajouté pour gérer la relation avec une structure
     ];
 
     protected $casts = [
@@ -49,6 +50,14 @@ class Agent extends Model
     public function universiteResponsable(): BelongsTo
     {
         return $this->belongsTo(Universite::class, 'universite_responsable_id');
+    }
+
+    /**
+     * Get the structure for which this agent is the responsable (if any).
+     */
+    public function structureResponsable(): BelongsTo
+    {
+        return $this->belongsTo(Structure::class, 'structure_id');
     }
 
     // Définir d'autres relations Eloquent ici ultérieurement (maître de stage, etc.)

@@ -24,8 +24,8 @@ Route::get('/', function () {
 
 Route::middleware(['auth', 'verified'])->group(function () {
     // Redirection du dashboard principal vers le dashboard approprié
-Route::get('/dashboard', function () {
-    $user = Auth::user();
+    Route::get('/dashboard', function () {
+        $user = Auth::user();
 
         if ($user->role === 'admin') {
             return redirect()->route('admin.dashboard');
@@ -37,7 +37,7 @@ Route::get('/dashboard', function () {
 
         if ($user->role === 'stagiaire') {
             return redirect()->route('stagiaire.dashboard');
-    }
+        }
 
         // Redirection par défaut
         return redirect()->route('login');
@@ -75,6 +75,9 @@ Route::get('/dashboard', function () {
         Route::put('/structures/{structure}', [StructureController::class, 'update'])->name('structures.update');
         Route::delete('/structures/{structure}', [StructureController::class, 'destroy'])->name('structures.destroy');
 
+        // Ajout de la route pour récupérer les structures disponibles
+        Route::get('/structures/available', [StructureController::class, 'available'])->name('structures.available');
+
         Route::get('/stagiaires', [StagiaireController::class, 'index'])->name('stagiaires.index');
         
         // Routes pour les agents
@@ -109,7 +112,6 @@ Route::get('/dashboard', function () {
         Route::get('/demandes/{demande}', [App\Http\Controllers\Agent\DemandeController::class, 'show'])->name('demandes.show');
         Route::post('/demandes/{demande}/approve', [App\Http\Controllers\Agent\DemandeController::class, 'approve'])->name('demandes.approve');
         Route::post('/demandes/{demande}/reject', [App\Http\Controllers\Agent\DemandeController::class, 'reject'])->name('demandes.reject');
-        Route::post('/demandes/{demande}/affecter', [App\Http\Controllers\Agent\DemandeController::class, 'affecter'])->name('demandes.affecter');
         Route::get('/structures', [App\Http\Controllers\Agent\StructureController::class, 'index'])->name('structures');
         Route::get('/structures/{structure}', [App\Http\Controllers\Agent\StructureController::class, 'show'])->name('structures.show');
         Route::get('/stagiaires', [App\Http\Controllers\Agent\StagiaireController::class, 'index'])->name('stagiaires.index');

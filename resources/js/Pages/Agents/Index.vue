@@ -1,15 +1,19 @@
 <script setup>
-import { ref, watch, onMounted } from 'vue';
+import { ref, watch, onMounted, computed } from 'vue';
+
 import { Head, useForm, usePage, router } from '@inertiajs/vue3';
-//import SimpleLayout from '@/Layouts/SimpleLayout.vue';
 import Admin from '@/Layouts/Admin.vue';
 import AdminToast from '@/Components/AdminToast.vue';
+import axios from 'axios';
+
 
 const props = defineProps({
   agents: Array,
 });
 
 const page = usePage();
+const flash = computed(() => page.props.flash); 
+
 const toast = ref(null);
 const showModal = ref(false);
 const showDeleteModal = ref(false);
@@ -20,31 +24,10 @@ const step = ref(1);
 const passwordConfirmation = ref('');
 const passwordError = ref('');
 
-// Surveiller les messages flash et les afficher automatiquement
-onMounted(() => {
-  // Vérifier si des messages flash existent au chargement
-  setTimeout(() => {
-    const { flash } = page.props;
-    if (flash) {
-      if (flash.success && toast.value) {
-        toast.value.addToast({
-          type: 'success',
-          title: 'Succès',
-          message: flash.success
-        });
-      }
-      
-      if (flash.error && toast.value) {
-        toast.value.addToast({
-          type: 'error',
-          title: 'Erreur',
-          message: flash.error
-        });
-      }
-    }
-  }, 100);
-});
+// Ajout pour gérer les structures disponibles
+const availableStructures = ref([]);
 
+// ✅ Correction ici : déclaration déplacée au-dessus du watch
 const form = useForm({
   nom: '',
   prenom: '',
@@ -58,12 +41,65 @@ const form = useForm({
   password_confirmation: '',
   date_embauche: '',
   role_agent: '',
+  structure_id: null, // Renommé pour plus de clarté
 });
+
+// Charger les structures disponibles si le rôle est RS
+watch(() => form.role_agent, async (newRole) => {
+  if (newRole === 'RS') {
+    await loadAvailableStructures();
+  } else {
+    form.structure_id = null;
+  }
+});
+
+// Surveiller les messages flash et les afficher automatiquement
+onMounted(() => {
+  setTimeout(() => {
+    const { flash } = page.props;
+    if (flash) {
+      if (flash.success && toast.value) {
+        toast.value.addToast({
+          type: 'success',
+          title: 'Succès',
+          message: flash.success,
+        });
+      }
+
+      if (flash.error && toast.value) {
+        toast.value.addToast({
+          type: 'error',
+          title: 'Erreur',
+          message: flash.error,
+        });
+      }
+    }
+  }, 100);
+});
+
+// Ajout d'une fonction pour charger les structures disponibles
+async function loadAvailableStructures() {
+  try {
+    const response = await axios.get(route('admin.structures.available', {
+      agent_id: editingId.value
+    }));
+    availableStructures.value = response.data;
+  } catch (error) {
+    console.error('Erreur lors du chargement des structures disponibles :', error);
+    if (toast.value) {
+      toast.value.addToast({
+        type: 'error',
+        title: 'Erreur',
+        message: 'Impossible de charger les structures disponibles'
+      });
+    }
+  }
+}
 
 function openModal(agent = null) {
   step.value = 1;
   passwordError.value = '';
-  
+
   if (agent) {
     form.nom = agent.user?.nom || '';
     form.prenom = agent.user?.prenom || '';
@@ -77,7 +113,13 @@ function openModal(agent = null) {
     form.password = '';
     form.password_confirmation = '';
     form.role_agent = agent.role_agent;
+    form.structure_id = agent.structure_id;
     editingId.value = agent.id;
+
+    // Charger les structures disponibles si l'agent est RS
+    if (agent.role_agent === 'RS') {
+      loadAvailableStructures();
+    }
   } else {
     form.reset();
     editingId.value = null;
@@ -93,7 +135,6 @@ function closeModal() {
   passwordError.value = '';
 }
 
-// Fonctions pour le modal de confirmation de suppression
 function openDeleteModal(agent) {
   agentToDelete.value = agent;
   showDeleteModal.value = true;
@@ -106,7 +147,7 @@ function closeDeleteModal() {
 
 function confirmDelete() {
   if (!agentToDelete.value) return;
-  
+
   destroy(agentToDelete.value.id);
   closeDeleteModal();
 }
@@ -115,22 +156,22 @@ function validatePasswords() {
   if (editingId.value && !form.password) {
     return true;
   }
-  
+
   if (form.password !== form.password_confirmation) {
     passwordError.value = 'Les mots de passe ne correspondent pas';
     return false;
   }
-  
+
   if (!editingId.value && !form.password) {
     passwordError.value = 'Le mot de passe est obligatoire';
     return false;
   }
-  
+
   if (form.password && form.password.length < 8) {
     passwordError.value = 'Le mot de passe doit contenir au moins 8 caractères';
     return false;
   }
-  
+
   passwordError.value = '';
   return true;
 }
@@ -149,18 +190,17 @@ function submit() {
     step.value = 1;
     return;
   }
-  
+
   if (editingId.value) {
     form.put(route('admin.agents.update', editingId.value), {
       preserveScroll: true,
       onSuccess: () => {
         closeModal();
-        // Afficher un message personnalisé
         if (toast.value) {
           toast.value.addToast({
             type: 'success',
             title: 'Agent modifié',
-            message: `L'agent "${form.prenom} ${form.nom}" a été mis à jour avec succès.`
+            message: `L'agent "${form.prenom} ${form.nom}" a été mis à jour avec succès.`,
           });
         }
       },
@@ -169,22 +209,21 @@ function submit() {
           toast.value.addToast({
             type: 'error',
             title: 'Erreur de validation',
-            message: 'Veuillez vérifier les informations saisies'
+            message: 'Veuillez vérifier les informations saisies',
           });
         }
-      }
+      },
     });
   } else {
     form.post(route('admin.agents.store'), {
       preserveScroll: true,
       onSuccess: () => {
         closeModal();
-        // Afficher un message personnalisé
         if (toast.value) {
           toast.value.addToast({
             type: 'success',
             title: 'Agent ajouté',
-            message: `L'agent "${form.prenom} ${form.nom}" a été ajouté avec succès.`
+            message: `L'agent "${form.prenom} ${form.nom}" a été ajouté avec succès.`,
           });
         }
       },
@@ -193,26 +232,24 @@ function submit() {
           toast.value.addToast({
             type: 'error',
             title: 'Erreur de validation',
-            message: 'Veuillez vérifier les informations saisies'
+            message: 'Veuillez vérifier les informations saisies',
           });
         }
-      }
+      },
     });
   }
 }
 
 function destroy(id) {
-  // Trouver l'agent pour afficher son nom dans le message de confirmation
-  const agent = props.agents.find(a => a.id === id);
-  
+  const agent = props.agents.find((a) => a.id === id);
+
   router.delete(route('agents.destroy', id), {
     onSuccess: () => {
-      // Afficher un message personnalisé
       if (toast.value) {
         toast.value.addToast({
           type: 'success',
           title: 'Agent supprimé',
-          message: `L'agent "${agent?.user?.prenom || ''} ${agent?.user?.nom || ''}" a été supprimé avec succès.`
+          message: `L'agent "${agent?.user?.prenom || ''} ${agent?.user?.nom || ''}" a été supprimé avec succès.`,
         });
       }
     },
@@ -221,10 +258,10 @@ function destroy(id) {
         toast.value.addToast({
           type: 'error',
           title: 'Erreur de suppression',
-          message: 'Impossible de supprimer cet agent'
+          message: 'Impossible de supprimer cet agent',
         });
       }
-    }
+    },
   });
 }
 </script>
@@ -247,16 +284,16 @@ function destroy(id) {
           </button>
         </div>
 
-        <!-- Flash message amélioré -->
-        <div v-if="flash"
-          class="p-4 bg-green-100 border-l-4 border-green-500 text-green-700 rounded shadow-sm flex items-center">
-          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
-            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mr-3">
-            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
-            <polyline points="22 4 12 14.01 9 11.01" />
-          </svg>
-          <span>{{ flash }}</span>
-        </div>
+       <!-- Flash message amélioré -->
+    <div v-if="flash.success"class="p-4 bg-green-100 border-l-4 border-green-500 text-green-700 rounded shadow-sm flex items-center">
+      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mr-3">
+    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+    <polyline points="22 4 12 14.01 9 11.01" />
+  </svg>
+  <span>{{ flash.success }}</span>
+</div>
+
 
         <div v-if="$page.props.flash && $page.props.flash.error" class="p-4 bg-red-100 border-l-4 border-red-500 text-red-700 rounded shadow-sm">
           {{ $page.props.flash.error }}
@@ -309,29 +346,28 @@ function destroy(id) {
                   <td class="px-6 py-4 border-b border-gray-200">{{ agent.role_agent }}</td>
                   <td class="px-6 py-4 border-b border-gray-200">
                     <div class="flex justify-center space-x-3">
-  <!-- Bouton Modifier -->
-  <button 
-    @click="openModal(agent)"
-    class="text-blue-600 hover:text-blue-800 flex items-center"
-    title="Modifier"
-  >
-    <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" viewBox="0 0 24 24" fill="none"
-      stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M17 3a2.85 2.85 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/>
-    </svg>
-  </button>
+                      <!-- Bouton Modifier -->
+                      <button 
+                        @click="openModal(agent)"
+                        class="text-blue-600 hover:text-blue-800 flex items-center"
+                        title="Modifier"
+                      >
+                        <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" viewBox="0 0 24 24" fill="none"
+                          stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                          <path d="M17 3a2.85 2.85 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/>
+                        </svg>
+                      </button>
 
-  <!-- Bouton Supprimer -->
-  <button @click="openDeleteModal(agent)" title="Supprimer"
-    class="text-red-600 hover:text-red-800 transition-colors ml-2">
-    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
-      stroke="currentColor" class="w-5 h-5">
-      <path stroke-linecap="round" stroke-linejoin="round"
-        d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" />
-    </svg>
-  </button>
-</div>
-
+                      <!-- Bouton Supprimer -->
+                      <button @click="openDeleteModal(agent)" title="Supprimer"
+                        class="text-red-600 hover:text-red-800 transition-colors ml-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
+                          stroke="currentColor" class="w-5 h-5">
+                          <path stroke-linecap="round" stroke-linejoin="round"
+                            d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" />
+                        </svg>
+                      </button>
+                    </div>
                   </td>
                 </tr>
               </tbody>
@@ -496,8 +532,31 @@ function destroy(id) {
                   <input v-model="form.date_embauche" type="date"
                     class="w-full border rounded-lg p-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     required />
-                  <div v-if="form.errors.date_embauche" class="text-red-600 text-sm mt-1">{{ form.errors.date_embauche
-                    }}</div>
+                  <div v-if="form.errors.date_embauche" class="text-red-600 text-sm mt-1">{{ form.errors.date_embauche }}</div>
+                </div>
+
+                <!-- Ajout pour la sélection de la structure si le rôle est RS -->
+                <div v-if="form.role_agent === 'RS'">
+                  <label class="block text-sm font-medium text-gray-700 mb-1">Structure</label>
+                  <select 
+                    v-model="form.structure_id"
+                    class="w-full border rounded-lg p-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    required
+                  >
+                    <option value="">Sélectionner une structure</option>
+                    <option 
+                      v-for="structure in availableStructures" 
+                      :key="structure.id" 
+                      :value="structure.id"
+                    >
+                      {{ structure.libelle }}
+                      {{ structure.responsable_id === editingId ? '(Structure actuelle)' : '' }}
+                    </option>
+                  </select>
+                  <div v-if="availableStructures.length === 0 && !editingId" class="text-amber-600 text-sm mt-1">
+                    Aucune structure disponible. Toutes les structures ont déjà un responsable.
+                  </div>
+                  <div v-if="form.errors.structure_id" class="text-red-600 text-sm mt-1">{{ form.errors.structure_id }}</div>
                 </div>
               </div>
 
