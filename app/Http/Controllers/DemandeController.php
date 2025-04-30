@@ -231,7 +231,7 @@ class DemandeController extends Controller
             $demandes = DemandeStage::where('stagiaire_id', $stagiaire->id_stagiaire)
                 ->with('structure')
                 ->orderBy('created_at', 'desc')
-                ->get();
+                ->paginate(10);
         }
         
         // Retourner la vue avec les demandes (vides ou non)

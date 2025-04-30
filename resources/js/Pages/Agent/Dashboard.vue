@@ -61,7 +61,7 @@
                     </div>
 
                     <!-- Structures actives -->
-                    <div class="bg-white rounded-lg shadow-md p-6">
+                   <!--  <div class="bg-white rounded-lg shadow-md p-6">
                         <div class="flex items-center justify-between">
                             <div>
                                 <p class="text-sm font-medium text-gray-500">Structures actives</p>
@@ -73,7 +73,7 @@
                                 </svg>
                             </div>
                         </div>
-                    </div>
+                    </div> -->
                 </div>
 
                 <!-- Dernières demandes -->

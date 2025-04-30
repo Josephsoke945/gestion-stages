@@ -3,11 +3,14 @@ import { Head, Link } from '@inertiajs/vue3';
 import { router } from '@inertiajs/vue3';
 import AgentDPAF from '@/Layouts/AgentDPAF.vue';
 import { ref } from 'vue';
+import AdminToast from '@/Components/AdminToast.vue';
 
 const props = defineProps({
     demande: Object,
     structures: Array
 });
+
+const toast = ref(null);
 
 const formatDate = (date) => {
     return new Date(date).toLocaleDateString('fr-FR');
@@ -47,6 +50,13 @@ const submitAffectation = () => {
     }, {
         onSuccess: () => {
             closeAffectationModal();
+            if (toast.value) {
+                toast.value.addToast({
+                    type: 'success',
+                    title: 'Affectation réussie',
+                    message: `La demande '${props.demande.code_suivi}' a été affectée à la structure '${props.structures.find(s => s.id === selectedStructure.value)?.libelle}' avec succès.`
+                });
+            }
         }
     });
 };
@@ -287,4 +297,7 @@ const submit = (action) => {
             </div>
         </div>
     </AgentDPAF>
+    
+    <!-- Composant Toast pour les notifications -->
+    <AdminToast ref="toast" />
 </template> 

@@ -307,7 +307,7 @@ const submitAffectation = () => {
                                         class="px-3 py-1 rounded text-gray-400 cursor-not-allowed"
                                     >
                                         <span v-if="link.label === '&laquo; Previous'">← Précédent</span>
-                                        <span v-else-if="link.label === 'Next &raquo;'">Suivant →</span>
+                                        <span v-else-if="link.label === 'Next &raquo;'">Suivant  →</span>
                                         <span v-else>{{ link.label }}</span>
                                     </span>
                                 </template>

@@ -44,7 +44,7 @@ class DemandeController extends Controller
             }
 
             // Filtre par statut
-            if ($request->filled('status') && in_array($request->status, ['En attente', 'Approuvée', 'Refusée'])) {
+            if ($request->filled('status') && in_array($request->status, ['En attente','En cours' ,'Approuvée', 'Refusée'])) {
                 $query->where('statut', $request->status);
             }
 
@@ -169,6 +169,9 @@ class DemandeController extends Controller
         ]);
 
         try {
+            // Récupérer la structure
+            $structure = Structure::findOrFail($request->structure_id);
+
             // Mettre à jour le statut de la demande en "En cours"
             $demande->update([
                 'statut' => 'En cours'
@@ -181,7 +184,7 @@ class DemandeController extends Controller
                 'date_affectation' => now(),
             ]);
 
-            return redirect()->back()->with('success', 'Structure affectée avec succès');
+            return redirect()->back()->with('success', "La demande '{$demande->code_suivi}' a été affectée à la structure '{$structure->sigle}' avec succès");
         } catch (\Exception $e) {
             Log::error('Erreur lors de l\'affectation de la structure', [
                 'demande_id' => $demande->id,
