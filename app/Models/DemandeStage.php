@@ -39,6 +39,9 @@ class DemandeStage extends Model
         'code_suivi',
         'statut',
         'date_soumission',
+        'date_traitement',
+        'traite_par',
+        'motif_refus',
     ];
     
     /**
@@ -50,7 +53,9 @@ class DemandeStage extends Model
         'date_debut' => 'date',
         'date_fin' => 'date',
         'date_soumission' => 'datetime',
+        'date_traitement' => 'datetime',
         'structure_id' => 'integer',
+        'traite_par' => 'integer',
     ];
     
     /**
@@ -83,5 +88,13 @@ class DemandeStage extends Model
     public function affectations()
     {
         return $this->hasMany(AffectationResponsableStructure::class, 'demande_id');
+    }
+
+    /**
+     * Relation avec l'agent qui a traité la demande
+     */
+    public function agentTraitement()
+    {
+        return $this->belongsTo(Agent::class, 'traite_par');
     }
 }

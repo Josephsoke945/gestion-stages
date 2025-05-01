@@ -5,8 +5,11 @@ namespace App\Http\Controllers\Agent\RS;
 use App\Http\Controllers\Controller;
 use App\Models\DemandeStage;
 use App\Models\Structure;
+use App\Mail\DemandeAcceptationMail;
+use App\Mail\DemandeRefusMail;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Mail;
 use Inertia\Inertia;
 use Illuminate\Support\Facades\Log;
 
@@ -136,13 +139,38 @@ class DemandeController extends Controller
                 return redirect()->back()->with('error', 'Vous n\'avez pas accès à cette demande.');
             }
 
+            // Charger les relations nécessaires pour l'email
+            $demande->load(['stagiaire.user', 'structure']);
+
             $demande->update([
-                'statut' => 'Approuvée',
+                'statut' => 'Acceptée',
                 'date_traitement' => now(),
                 'traite_par' => $agent->id
             ]);
 
-            return redirect()->back()->with('success', 'La demande a été approuvée avec succès.');
+            // Envoyer l'email au stagiaire
+            try {
+                Mail::to($demande->stagiaire->user->email)
+                    ->send(new DemandeAcceptationMail($demande, $demande->stagiaire->user));
+
+                // Si c'est une demande de groupe, envoyer aux membres aussi
+                if ($demande->nature === 'Groupe') {
+                    foreach ($demande->membres as $membre) {
+                        if ($membre->user && $membre->user->email !== $demande->stagiaire->user->email) {
+                            Mail::to($membre->user->email)
+                                ->send(new DemandeAcceptationMail($demande, $membre->user));
+                        }
+                    }
+                }
+            } catch (\Exception $e) {
+                Log::error('Erreur lors de l\'envoi de l\'email d\'acceptation', [
+                    'error' => $e->getMessage(),
+                    'demande_id' => $demande->id
+                ]);
+                // On continue même si l'email échoue
+            }
+
+            return redirect()->back()->with('success', 'La demande a été acceptée avec succès.');
 
         } catch (\Exception $e) {
             Log::error('Erreur lors de l\'approbation de la demande RS', [
@@ -167,27 +195,54 @@ class DemandeController extends Controller
                 return redirect()->back()->with('error', 'Vous n\'avez pas accès à cette demande.');
             }
 
+            // Valider le motif de refus
             $validated = $request->validate([
-                'motif_rejet' => 'required|string|max:500'
+                'motif_refus' => 'required|string|max:500'
             ]);
 
+            // Charger les relations nécessaires pour l'email
+            $demande->load(['stagiaire.user', 'structure']);
+
+            // Mettre à jour la demande
             $demande->update([
                 'statut' => 'Refusée',
                 'date_traitement' => now(),
                 'traite_par' => $agent->id,
-                'motif_rejet' => $validated['motif_rejet']
+                'motif_refus' => $validated['motif_refus']
             ]);
 
-            return redirect()->back()->with('success', 'La demande a été rejetée avec succès.');
+            // Envoyer l'email au stagiaire
+            try {
+                Mail::to($demande->stagiaire->user->email)
+                    ->send(new DemandeRefusMail($demande, $demande->stagiaire->user, $validated['motif_refus']));
+
+                // Si c'est une demande de groupe, envoyer aux membres aussi
+                if ($demande->nature === 'Groupe') {
+                    foreach ($demande->membres as $membre) {
+                        if ($membre->user && $membre->user->email !== $demande->stagiaire->user->email) {
+                            Mail::to($membre->user->email)
+                                ->send(new DemandeRefusMail($demande, $membre->user, $validated['motif_refus']));
+                        }
+                    }
+                }
+            } catch (\Exception $e) {
+                Log::error('Erreur lors de l\'envoi de l\'email de refus', [
+                    'error' => $e->getMessage(),
+                    'demande_id' => $demande->id
+                ]);
+                // On continue même si l'email échoue
+            }
+
+            return redirect()->back()->with('success', 'La demande a été refusée avec succès.');
 
         } catch (\Exception $e) {
-            Log::error('Erreur lors du rejet de la demande RS', [
+            Log::error('Erreur lors du refus de la demande RS', [
                 'error' => $e->getMessage(),
                 'agent_id' => $agent->id,
                 'demande_id' => $demande->id
             ]);
 
-            return redirect()->back()->with('error', 'Une erreur est survenue lors du rejet de la demande.');
+            return redirect()->back()->with('error', 'Une erreur est survenue lors du refus de la demande.');
         }
     }
 } 

@@ -38,11 +38,11 @@ class DashboardController extends Controller
             if ($structure) {
                 // Statistiques des demandes pour cette structure
                 $stats['demandesEnAttente'] = DemandeStage::where('structure_id', $structure->id)
-                    ->where('statut', 'En attente')
+                    ->where('statut', 'En cours')
                     ->count();
                     
                 $stats['demandesAcceptees'] = DemandeStage::where('structure_id', $structure->id)
-                    ->where('statut', 'Approuvée')
+                    ->where('statut', 'Acceptée')
                     ->count();
                     
                 $stats['demandesRejetees'] = DemandeStage::where('structure_id', $structure->id)

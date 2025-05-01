@@ -52,7 +52,7 @@
             </div>
           </div>
 
-          <!-- Demandes traitées -->
+          <!-- Demandes en cours -->
           <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
             <div class="p-6">
               <div class="flex items-center">
@@ -62,8 +62,8 @@
                   </svg>
                 </div>
                 <div class="ml-4">
-                  <p class="text-sm text-gray-600">Demandes traitées</p>
-                  <p class="text-2xl font-semibold text-gray-800">{{ stats.demandesTraitees }}</p>
+                  <p class="text-sm text-gray-600">Demandes en cours</p>
+                  <p class="text-2xl font-semibold text-gray-800">{{ stats.demandesEnCours }}</p>
                 </div>
               </div>
             </div>
@@ -193,7 +193,9 @@ function getStatusClass(status) {
   switch (status) {
     case 'En attente':
       return 'bg-yellow-100 text-yellow-800';
-    case 'Approuvée':
+    case 'En cours':
+      return 'bg-blue-100 text-blue-800';
+    case 'Acceptée':
       return 'bg-green-100 text-green-800';
     case 'Refusée':
       return 'bg-red-100 text-red-800';

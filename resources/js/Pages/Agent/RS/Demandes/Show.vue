@@ -139,7 +139,7 @@
                   <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
                     <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
                   </svg>
-                  Approuver la demande
+                  Acepter la demande
                 </button>
                 <button
                   @click="showRejectModal = true"
@@ -168,13 +168,13 @@
             Motif du rejet
           </label>
           <textarea
-            v-model="rejectForm.motif_rejet"
+            v-model="rejectForm.motif_refus"
             rows="4"
             class="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50"
             placeholder="Veuillez expliquer le motif du rejet..."
           ></textarea>
-          <p v-if="rejectForm.errors.motif_rejet" class="mt-2 text-sm text-red-600">
-            {{ rejectForm.errors.motif_rejet }}
+          <p v-if="rejectForm.errors.motif_refus" class="mt-2 text-sm text-red-600">
+            {{ rejectForm.errors.motif_refus }}
           </p>
         </div>
         <div class="flex justify-end gap-4">
@@ -238,7 +238,7 @@ const showRejectModal = ref(false);
 const showApproveModal = ref(false);
 
 const rejectForm = useForm({
-  motif_rejet: '',
+  motif_refus: '',
 });
 
 const approveForm = useForm({});
@@ -283,7 +283,7 @@ function getStatusColor(status) {
       return 'text-yellow-600 bg-yellow-100';
     case 'En cours':
       return 'text-blue-600 bg-blue-100';
-    case 'Approuvée':
+    case 'Acceptée':
       return 'text-green-600 bg-green-100';
     case 'Refusée':
       return 'text-red-600 bg-red-100';

@@ -189,7 +189,7 @@ const formatDate = (date) => {
 const getStatusClass = (status) => {
     const classes = {
         'En attente': 'bg-yellow-100 text-yellow-800',
-        'Approuvée': 'bg-green-100 text-green-800',
+        'Acceptée': 'bg-green-100 text-green-800',
         'Refusée': 'bg-red-100 text-red-800',
         'En cours': 'bg-blue-100 text-blue-800'
     };
