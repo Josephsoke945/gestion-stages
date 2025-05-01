@@ -24,15 +24,20 @@ Route::get('/', function () {
 
 Route::middleware(['auth', 'verified'])->group(function () {
     // Redirection du dashboard principal vers le dashboard approprié
-    Route::get('/dashboard', function () {
-        $user = Auth::user();
+Route::get('/dashboard', function () {
+    $user = Auth::user();
 
         if ($user->role === 'admin') {
             return redirect()->route('admin.dashboard');
         }
 
-        if ($user->agent && $user->agent->role_agent === 'DPAF') {
-            return redirect()->route('agent.dashboard');
+        if ($user->agent) {
+            if ($user->agent->role_agent === 'RS') {
+                return redirect()->route('agent.rs.dashboard');
+            }
+            if ($user->agent->role_agent === 'DPAF') {
+                return redirect()->route('agent.dashboard');
+            }
         }
 
         if ($user->role === 'stagiaire') {
@@ -116,6 +121,15 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('/structures/{structure}', [App\Http\Controllers\Agent\StructureController::class, 'show'])->name('structures.show');
         Route::get('/stagiaires', [App\Http\Controllers\Agent\StagiaireController::class, 'index'])->name('stagiaires.index');
         Route::get('/stagiaires/{stagiaire}', [App\Http\Controllers\Agent\StagiaireController::class, 'show'])->name('stagiaires.show');
+
+        // Routes pour les agents RS
+        Route::prefix('rs')->name('rs.')->middleware(['auth'])->group(function () {
+            Route::get('/dashboard', [App\Http\Controllers\Agent\RS\DashboardController::class, 'index'])->name('dashboard');
+            Route::get('/demandes', [App\Http\Controllers\Agent\RS\DemandeController::class, 'index'])->name('demandes');
+            Route::get('/demandes/{demande}', [App\Http\Controllers\Agent\RS\DemandeController::class, 'show'])->name('demandes.show');
+            Route::post('/demandes/{demande}/approve', [App\Http\Controllers\Agent\RS\DemandeController::class, 'approve'])->name('demandes.approve');
+            Route::post('/demandes/{demande}/reject', [App\Http\Controllers\Agent\RS\DemandeController::class, 'reject'])->name('demandes.reject');
+        });
     });
     
     // Routes pour les stagiaires

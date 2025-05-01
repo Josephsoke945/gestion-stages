@@ -65,7 +65,7 @@ onMounted(() => {
           message: flash.success,
         });
       }
-
+      
       if (flash.error && toast.value) {
         toast.value.addToast({
           type: 'error',
@@ -99,7 +99,7 @@ async function loadAvailableStructures() {
 function openModal(agent = null) {
   step.value = 1;
   passwordError.value = '';
-
+  
   if (agent) {
     form.nom = agent.user?.nom || '';
     form.prenom = agent.user?.prenom || '';
@@ -147,7 +147,7 @@ function closeDeleteModal() {
 
 function confirmDelete() {
   if (!agentToDelete.value) return;
-
+  
   destroy(agentToDelete.value.id);
   closeDeleteModal();
 }
@@ -156,22 +156,22 @@ function validatePasswords() {
   if (editingId.value && !form.password) {
     return true;
   }
-
+  
   if (form.password !== form.password_confirmation) {
     passwordError.value = 'Les mots de passe ne correspondent pas';
     return false;
   }
-
+  
   if (!editingId.value && !form.password) {
     passwordError.value = 'Le mot de passe est obligatoire';
     return false;
   }
-
+  
   if (form.password && form.password.length < 8) {
     passwordError.value = 'Le mot de passe doit contenir au moins 8 caractères';
     return false;
   }
-
+  
   passwordError.value = '';
   return true;
 }
@@ -190,7 +190,7 @@ function submit() {
     step.value = 1;
     return;
   }
-
+  
   if (editingId.value) {
     form.put(route('admin.agents.update', editingId.value), {
       preserveScroll: true,
@@ -242,7 +242,7 @@ function submit() {
 
 function destroy(id) {
   const agent = props.agents.find((a) => a.id === id);
-
+  
   router.delete(route('agents.destroy', id), {
     onSuccess: () => {
       if (toast.value) {
@@ -284,15 +284,15 @@ function destroy(id) {
           </button>
         </div>
 
-       <!-- Flash message amélioré -->
+        <!-- Flash message amélioré -->
     <div v-if="flash.success"class="p-4 bg-green-100 border-l-4 border-green-500 text-green-700 rounded shadow-sm flex items-center">
-      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
-    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mr-3">
-    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
-    <polyline points="22 4 12 14.01 9 11.01" />
-  </svg>
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mr-3">
+            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+            <polyline points="22 4 12 14.01 9 11.01" />
+          </svg>
   <span>{{ flash.success }}</span>
-</div>
+        </div>
 
 
         <div v-if="$page.props.flash && $page.props.flash.error" class="p-4 bg-red-100 border-l-4 border-red-500 text-red-700 rounded shadow-sm">
@@ -346,28 +346,28 @@ function destroy(id) {
                   <td class="px-6 py-4 border-b border-gray-200">{{ agent.role_agent }}</td>
                   <td class="px-6 py-4 border-b border-gray-200">
                     <div class="flex justify-center space-x-3">
-                      <!-- Bouton Modifier -->
-                      <button 
-                        @click="openModal(agent)"
-                        class="text-blue-600 hover:text-blue-800 flex items-center"
-                        title="Modifier"
-                      >
-                        <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" viewBox="0 0 24 24" fill="none"
-                          stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                          <path d="M17 3a2.85 2.85 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/>
-                        </svg>
-                      </button>
+  <!-- Bouton Modifier -->
+  <button 
+    @click="openModal(agent)"
+    class="text-blue-600 hover:text-blue-800 flex items-center"
+    title="Modifier"
+  >
+    <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" viewBox="0 0 24 24" fill="none"
+      stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M17 3a2.85 2.85 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/>
+    </svg>
+  </button>
 
-                      <!-- Bouton Supprimer -->
-                      <button @click="openDeleteModal(agent)" title="Supprimer"
-                        class="text-red-600 hover:text-red-800 transition-colors ml-2">
-                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
-                          stroke="currentColor" class="w-5 h-5">
-                          <path stroke-linecap="round" stroke-linejoin="round"
-                            d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" />
-                        </svg>
-                      </button>
-                    </div>
+  <!-- Bouton Supprimer -->
+  <button @click="openDeleteModal(agent)" title="Supprimer"
+    class="text-red-600 hover:text-red-800 transition-colors ml-2">
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
+      stroke="currentColor" class="w-5 h-5">
+      <path stroke-linecap="round" stroke-linejoin="round"
+        d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" />
+    </svg>
+  </button>
+</div>
                   </td>
                 </tr>
               </tbody>
