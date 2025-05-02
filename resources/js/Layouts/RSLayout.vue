@@ -31,6 +31,12 @@
                                     <span class="inline-flex rounded-md">
                                         <button type="button"
                                             class="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-gray-500 bg-white hover:text-gray-700 focus:outline-none transition ease-in-out duration-150">
+                                            <img
+                                                v-if="user && user.avatar"
+                                                :src="'/storage/' + user.avatar"
+                                                alt="Photo de profil"
+                                                class="w-9 h-9 rounded-full object-cover mr-2 border border-gray-300"
+                                            />
                                             {{ $page.props.auth.user.nom }}
                                             <svg class="ml-2 -mr-0.5 h-4 w-4" xmlns="http://www.w3.org/2000/svg"
                                                 viewBox="0 0 20 20" fill="currentColor">
@@ -133,9 +139,10 @@ import Dropdown from '@/Components/Dropdown.vue';
 import DropdownLink from '@/Components/DropdownLink.vue';
 import NavLink from '@/Components/NavLink.vue';
 import ResponsiveNavLink from '@/Components/ResponsiveNavLink.vue';
-import { Link } from '@inertiajs/vue3';
+import { Link, usePage } from '@inertiajs/vue3';
 
 const showingNavigationDropdown = ref(false);
+const user = usePage().props.auth?.user;
 </script>
 
 <style scoped>

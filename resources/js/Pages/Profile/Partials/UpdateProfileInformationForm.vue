@@ -162,12 +162,12 @@ const updateProfileInformation = async () => {
                 <div class="space-y-2">
                     <InputLabel for="nom" value="Nom" class="text-gray-700" />
                     <div class="relative">
-                        <TextInput
+                <TextInput
                             id="nom"
-                            type="text"
+                    type="text"
                             v-model="form.nom"
                             class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
-                            required
+                    required
                             placeholder="Votre nom"
                         />
                         <div v-if="form.nom" class="absolute right-3 top-2.5 text-green-500">
@@ -210,10 +210,10 @@ const updateProfileInformation = async () => {
                             <path d="M18 8.118l-8 4-8-4V14a2 2 0 002 2h12a2 2 0 002-2V8.118z" />
                         </svg>
                     </div>
-                    <TextInput
-                        id="email"
-                        type="email"
-                        v-model="form.email"
+                <TextInput
+                    id="email"
+                    type="email"
+                    v-model="form.email"
                         class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
                         required
                         placeholder="votre@email.com"
@@ -235,7 +235,7 @@ const updateProfileInformation = async () => {
                         type="tel"
                         v-model="form.telephone"
                         class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
-                        required
+                    required
                         pattern="[0-9]{10}"
                         placeholder="0123456789"
                     />
@@ -272,15 +272,15 @@ const updateProfileInformation = async () => {
                     <div class="ml-3">
                         <p class="text-sm text-yellow-700">
                             Votre adresse email n'est pas vérifiée.
-                            <Link
-                                :href="route('verification.send')"
-                                method="post"
-                                as="button"
+                    <Link
+                        :href="route('verification.send')"
+                        method="post"
+                        as="button"
                                 class="font-medium text-yellow-700 underline hover:text-yellow-600"
-                            >
+                    >
                                 Cliquez ici pour renvoyer l'email de vérification.
-                            </Link>
-                        </p>
+                    </Link>
+                </p>
                     </div>
                 </div>
             </div>

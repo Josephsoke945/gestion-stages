@@ -151,7 +151,7 @@
                     <option value="">Sélectionner un rôle</option>
                     <option value="admin">Admin</option>
                     <option value="agent">Agent</option>
-                    <option value="stagiaire">Stagiaire</option>
+                    <!-- <option value="stagiaire">Stagiaire</option> -->
                   </select>
                   <div v-if="form.errors.role" class="mt-1 text-sm text-red-600">{{ form.errors.role }}</div>
                 </div>
