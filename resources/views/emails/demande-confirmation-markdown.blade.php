@@ -13,7 +13,7 @@ Conservez ce code précieusement pour suivre l'état de votre demande.
 @endcomponent
 
 ## Détails de votre demande
-**Structure :** {{ $demande->structure->libelle }}  
+**Structure :** {{ $demande->structure ? $demande->structure->libelle : 'Non spécifiée' }}  
 **Type :** {{ $demande->type }}  
 **Nature :** {{ $demande->nature }}  
 **Période :** Du {{ \Carbon\Carbon::parse($demande->date_debut)->format('d/m/Y') }} au {{ \Carbon\Carbon::parse($demande->date_fin)->format('d/m/Y') }}  

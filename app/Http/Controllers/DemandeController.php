@@ -44,15 +44,16 @@ class DemandeController extends Controller
             'prenom' => 'required|string|max:255',
             'email' => 'required|email|max:255',
             'telephone' => 'required|string|max:20',
-            'universite' => 'required|string|max:255',
+            'universite' => 'nullable|required_if:type,Académique|string|max:255',
             'filiere' => 'required|string|max:255',
             'niveau_etude' => 'required|string|max:255',
             'date_debut' => 'required|date',
             'date_fin' => 'required|date|after:date_debut',
-            'structure_id' => 'required|exists:structures,id',
+            'structure_id' => 'nullable|exists:structures,id',
             'type' => 'required|in:Académique,Professionnelle',
             'nature' => 'required|in:Individuel,Groupe',
             'lettre_cv_path' => 'nullable|file|mimes:pdf,doc,docx|max:2048',
+            'diplomes_path' => 'nullable|file|mimes:pdf,doc,docx|max:2048',
             'membres' => 'nullable|array',
             'membres.*' => 'exists:users,id',
         ]);
@@ -80,10 +81,16 @@ class DemandeController extends Controller
                 ]
             );
             
-            // Upload du fichier s'il existe
-            $path = null;
+            // Upload des fichiers s'ils existent
+            $cv_path = null;
+            $diplomes_path = null;
+            
             if ($request->hasFile('lettre_cv_path') && $request->file('lettre_cv_path')->isValid()) {
-                $path = $request->file('lettre_cv_path')->store('documents', 'public');
+                $cv_path = $request->file('lettre_cv_path')->store('documents/cv', 'public');
+            }
+            
+            if ($request->hasFile('diplomes_path') && $request->file('diplomes_path')->isValid()) {
+                $diplomes_path = $request->file('diplomes_path')->store('documents/diplomes', 'public');
             }
             
             // Générer un code de suivi unique
@@ -98,7 +105,8 @@ class DemandeController extends Controller
                 'date_fin' => $validated['date_fin'],
                 'type' => $validated['type'],
                 'nature' => $validated['nature'],
-                'lettre_cv_path' => $path,
+                'lettre_cv_path' => $cv_path,
+                'diplomes_path' => $diplomes_path,
                 'code_suivi' => $codeSuivi,
                 'statut' => 'En attente',
                 'date_soumission' => now(),
@@ -231,7 +239,7 @@ class DemandeController extends Controller
             $demandes = DemandeStage::where('stagiaire_id', $stagiaire->id_stagiaire)
                 ->with('structure')
                 ->orderBy('created_at', 'desc')
-                ->get();
+                ->paginate(10);
         }
         
         // Retourner la vue avec les demandes (vides ou non)

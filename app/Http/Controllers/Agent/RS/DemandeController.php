@@ -1,0 +1,248 @@
+<?php
+
+namespace App\Http\Controllers\Agent\RS;
+
+use App\Http\Controllers\Controller;
+use App\Models\DemandeStage;
+use App\Models\Structure;
+use App\Mail\DemandeAcceptationMail;
+use App\Mail\DemandeRefusMail;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Mail;
+use Inertia\Inertia;
+use Illuminate\Support\Facades\Log;
+
+class DemandeController extends Controller
+{
+    public function __construct(Request $request)
+    {
+        $user = Auth::user();
+        if (!$user || !$user->agent || $user->agent->role_agent !== 'RS') {
+            abort(403, 'Accès réservé aux Responsables de Structure.');
+        }
+    }
+
+    public function index(Request $request)
+    {
+        $user = Auth::user();
+        $agent = $user->agent;
+        
+        try {
+            $structure = Structure::where('responsable_id', $agent->id)->first();
+            
+            if (!$structure) {
+                return redirect()->back()->with('error', 'Vous n\'êtes responsable d\'aucune structure.');
+            }
+
+            // Construction de la requête de base
+            $query = DemandeStage::with(['stagiaire.user'])
+                ->where('structure_id', $structure->id);
+
+            // Filtre par statut
+            if ($request->filled('status')) {
+                $query->where('statut', $request->status);
+            }
+
+            // Filtre par recherche
+            if ($request->filled('search')) {
+                $search = $request->search;
+                $query->whereHas('stagiaire.user', function ($q) use ($search) {
+                    $q->where(function ($subQuery) use ($search) {
+                        $subQuery->where('nom', 'like', "%{$search}%")
+                                ->orWhere('prenom', 'like', "%{$search}%")
+                                ->orWhere('email', 'like', "%{$search}%");
+                    });
+                });
+            }
+
+            // Filtre par période
+            if ($request->filled('period')) {
+                $now = now();
+                switch ($request->period) {
+                    case 'today':
+                        $query->whereDate('created_at', $now->toDateString());
+                        break;
+                    case 'week':
+                        $query->whereBetween('created_at', [
+                            $now->startOfWeek()->toDateTimeString(),
+                            $now->endOfWeek()->toDateTimeString()
+                        ]);
+                        break;
+                    case 'month':
+                        $query->whereMonth('created_at', $now->month)
+                              ->whereYear('created_at', $now->year);
+                        break;
+                    case 'year':
+                        $query->whereYear('created_at', $now->year);
+                        break;
+                }
+            }
+
+            // Récupération des demandes avec pagination
+            $demandes = $query->latest()->paginate(10)->withQueryString();
+
+            return Inertia::render('Agent/RS/Demandes/Index', [
+                'demandes' => $demandes,
+                'structure' => $structure,
+                'filters' => $request->only(['status', 'search', 'period', 'page'])
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('Erreur lors du chargement des demandes RS', [
+                'error' => $e->getMessage(),
+                'agent_id' => $agent->id
+            ]);
+
+            return redirect()->back()->with('error', 'Une erreur est survenue lors du chargement des demandes.');
+        }
+    }
+
+    public function show(DemandeStage $demande)
+    {
+        $user = Auth::user();
+        $agent = $user->agent;
+
+        try {
+            $structure = Structure::where('responsable_id', $agent->id)->first();
+            
+            if (!$structure || $demande->structure_id !== $structure->id) {
+                return redirect()->back()->with('error', 'Vous n\'avez pas accès à cette demande.');
+            }
+
+            $demande->load(['stagiaire.user', 'structure']);
+
+            return Inertia::render('Agent/RS/Demandes/Show', [
+                'demande' => $demande
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('Erreur lors de l\'affichage de la demande RS', [
+                'error' => $e->getMessage(),
+                'agent_id' => $agent->id,
+                'demande_id' => $demande->id
+            ]);
+
+            return redirect()->back()->with('error', 'Une erreur est survenue lors du chargement de la demande.');
+        }
+    }
+
+    public function approve(DemandeStage $demande)
+    {
+        $user = Auth::user();
+        $agent = $user->agent;
+
+        try {
+            $structure = Structure::where('responsable_id', $agent->id)->first();
+            
+            if (!$structure || $demande->structure_id !== $structure->id) {
+                return redirect()->back()->with('error', 'Vous n\'avez pas accès à cette demande.');
+            }
+
+            // Charger les relations nécessaires pour l'email
+            $demande->load(['stagiaire.user', 'structure']);
+
+            $demande->update([
+                'statut' => 'Acceptée',
+                'date_traitement' => now(),
+                'traite_par' => $agent->id
+            ]);
+
+            // Envoyer l'email au stagiaire
+            try {
+                Mail::to($demande->stagiaire->user->email)
+                    ->send(new DemandeAcceptationMail($demande, $demande->stagiaire->user));
+
+                // Si c'est une demande de groupe, envoyer aux membres aussi
+                if ($demande->nature === 'Groupe') {
+                    foreach ($demande->membres as $membre) {
+                        if ($membre->user && $membre->user->email !== $demande->stagiaire->user->email) {
+                            Mail::to($membre->user->email)
+                                ->send(new DemandeAcceptationMail($demande, $membre->user));
+                        }
+                    }
+                }
+            } catch (\Exception $e) {
+                Log::error('Erreur lors de l\'envoi de l\'email d\'acceptation', [
+                    'error' => $e->getMessage(),
+                    'demande_id' => $demande->id
+                ]);
+                // On continue même si l'email échoue
+            }
+
+            return redirect()->back()->with('success', 'La demande a été acceptée avec succès.');
+
+        } catch (\Exception $e) {
+            Log::error('Erreur lors de l\'approbation de la demande RS', [
+                'error' => $e->getMessage(),
+                'agent_id' => $agent->id,
+                'demande_id' => $demande->id
+            ]);
+
+            return redirect()->back()->with('error', 'Une erreur est survenue lors de l\'approbation de la demande.');
+        }
+    }
+
+    public function reject(Request $request, DemandeStage $demande)
+    {
+        $user = Auth::user();
+        $agent = $user->agent;
+
+        try {
+            $structure = Structure::where('responsable_id', $agent->id)->first();
+            
+            if (!$structure || $demande->structure_id !== $structure->id) {
+                return redirect()->back()->with('error', 'Vous n\'avez pas accès à cette demande.');
+            }
+
+            // Valider le motif de refus
+            $validated = $request->validate([
+                'motif_refus' => 'required|string|max:500'
+            ]);
+
+            // Charger les relations nécessaires pour l'email
+            $demande->load(['stagiaire.user', 'structure']);
+
+            // Mettre à jour la demande
+            $demande->update([
+                'statut' => 'Refusée',
+                'date_traitement' => now(),
+                'traite_par' => $agent->id,
+                'motif_refus' => $validated['motif_refus']
+            ]);
+
+            // Envoyer l'email au stagiaire
+            try {
+                Mail::to($demande->stagiaire->user->email)
+                    ->send(new DemandeRefusMail($demande, $demande->stagiaire->user, $validated['motif_refus']));
+
+                // Si c'est une demande de groupe, envoyer aux membres aussi
+                if ($demande->nature === 'Groupe') {
+                    foreach ($demande->membres as $membre) {
+                        if ($membre->user && $membre->user->email !== $demande->stagiaire->user->email) {
+                            Mail::to($membre->user->email)
+                                ->send(new DemandeRefusMail($demande, $membre->user, $validated['motif_refus']));
+                        }
+                    }
+                }
+            } catch (\Exception $e) {
+                Log::error('Erreur lors de l\'envoi de l\'email de refus', [
+                    'error' => $e->getMessage(),
+                    'demande_id' => $demande->id
+                ]);
+                // On continue même si l'email échoue
+            }
+
+            return redirect()->back()->with('success', 'La demande a été refusée avec succès.');
+
+        } catch (\Exception $e) {
+            Log::error('Erreur lors du refus de la demande RS', [
+                'error' => $e->getMessage(),
+                'agent_id' => $agent->id,
+                'demande_id' => $demande->id
+            ]);
+
+            return redirect()->back()->with('error', 'Une erreur est survenue lors du refus de la demande.');
+        }
+    }
+} 

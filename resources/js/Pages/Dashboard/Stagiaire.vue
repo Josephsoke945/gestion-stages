@@ -124,10 +124,17 @@ const form = useForm({
   date_fin: '',
   structure_id: '',
   nature: 'Individuel',
-  type: 'Académique', // Maintenant indépendant de la nature
+  type: 'Académique',
   lettre_cv_path: null,
-  pieces_jointes: [], // Tableau pour stocker les pièces jointes multiples
+  pieces_jointes: [],
   membres: [],
+});
+
+// Watcher pour réinitialiser le champ université quand le type change
+watch(() => form.type, (newType) => {
+  if (newType === 'Professionnelle') {
+    form.universite = '';
+  }
 });
 
 // Fonction pour gérer le téléchargement de fichier pour un membre
@@ -273,8 +280,15 @@ const validateStep = () => {
       (form.nature !== 'Groupe' || (form.membres && form.membres.length > 0));
   }
   if (step.value === 2) {
-    return form.universite && form.filiere && form.niveau_etude &&
-      form.date_debut && form.date_fin && form.structure_id && isDateValid.value;
+    const baseValidation = form.filiere && form.niveau_etude &&
+      form.date_debut && form.date_fin && isDateValid.value;
+    
+    // Vérifier l'université uniquement pour les demandes académiques
+    if (form.type === 'Académique') {
+      return baseValidation && form.universite;
+    }
+    
+    return baseValidation;
   }
   if (step.value === 3) {
     // Pour l'étape 3, on avertit simplement mais on permet de continuer
@@ -296,13 +310,12 @@ const nextStep = () => {
         errorMessage = "Veuillez remplir tous les champs obligatoires";
       }
     } else if (step.value === 2) {
-      if (!form.universite) errorMessage = "Le champ Université est obligatoire";
-      else if (!form.filiere) errorMessage = "Le champ Spécialité est obligatoire";
+      if (!form.filiere) errorMessage = "Le champ Spécialité est obligatoire";
       else if (!form.niveau_etude) errorMessage = "Le champ Niveau d'étude est obligatoire";
       else if (!form.date_debut) errorMessage = "Le champ Date de début est obligatoire";
       else if (!form.date_fin) errorMessage = "Le champ Date de fin est obligatoire";
-      else if (!form.structure_id) errorMessage = "Veuillez sélectionner une structure";
       else if (!isDateValid.value) errorMessage = "La date de fin doit être après la date de début";
+      else if (form.type !== 'Professionnelle' && !form.universite) errorMessage = "Le champ Université est obligatoire";
     }
 
     addToast({
@@ -557,13 +570,24 @@ const handleFileUpload = (event) => {
 const validateForm = () => {
   // Vérification de base du formulaire
   if (!form.nom || !form.prenom || !form.email || !form.telephone ||
-    !form.universite || !form.filiere || !form.niveau_etude ||
+    !form.filiere || !form.niveau_etude ||
     !form.date_debut || !form.date_fin || !form.structure_id) {
 
     addToast({
       type: 'error',
       title: 'Formulaire incomplet',
       message: 'Veuillez remplir tous les champs obligatoires',
+      duration: 5000
+    });
+    return false;
+  }
+
+  // Vérification de l'université uniquement pour les demandes académiques
+  if (form.type === 'Académique' && !form.universite) {
+    addToast({
+      type: 'error',
+      title: 'Champ obligatoire',
+      message: 'Le champ Université est obligatoire pour les demandes académiques',
       duration: 5000
     });
     return false;
@@ -616,6 +640,13 @@ const isMemberSelected = (userId) => {
     return memId === id;
   });
 };
+
+// Validation personnalisée
+watch(() => form.type, (newType) => {
+  if (newType === 'Professionnelle') {
+    form.universite = ''; // Réinitialiser le champ université
+  }
+});
 </script>
 <template>
   <Head title="Tableau de bord" />
@@ -697,7 +728,7 @@ const isMemberSelected = (userId) => {
           <!-- Étape 1 -->
           <div v-if="step === 1" class="step-content">
             <div class="form-section">
-              <h3 class="section-title">Vos informations</h3>
+              <h3 class="section-title">Vos informations </h3>
               <div class="form-grid">
                 <div class="form-group">
                   <label class="required">Nom</label>
@@ -821,9 +852,10 @@ const isMemberSelected = (userId) => {
             <div class="form-section">
               <h3 class="section-title">Informations </h3>
               <div class="form-grid">
-                <div class="form-group">
+                <div v-if="form.type === 'Académique'" class="form-group">
                   <label class="required">Université</label>
-                  <input v-model="form.universite" type="text" class="form-input">
+                  <input v-model="form.universite" type="text" class="form-input" placeholder="Nom de l'université">
+                  <span v-if="form.errors.universite" class="error-msg">{{ form.errors.universite }}</span>
                 </div>
                 <div class="form-group">
                   <label class="required">Specialité</label>
@@ -841,7 +873,7 @@ const isMemberSelected = (userId) => {
                   </select>
                 </div>
                 <div class="form-group">
-                  <label class="required">Structure</label>
+                  <label>Structure</label>
                   <select v-model="form.structure_id" class="form-input">
                     <option value="">-- Sélectionner --</option>
                     <option v-for="structure in structures" :key="structure.id" :value="structure.id">

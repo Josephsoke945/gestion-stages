@@ -137,6 +137,18 @@
                   ></textarea>
                   <div v-if="form.errors.description" class="mt-1 text-sm text-red-600">{{ form.errors.description }}</div>
                 </div>
+                
+                <!-- Champ pour sélectionner une structure si le rôle est "RS" -->
+                <div v-if="form.role_agent === 'RS'">
+                  <label class="block text-sm font-medium text-gray-700 mb-1">Structure</label>
+                  <select v-model="form.structure_id" class="w-full border rounded-lg p-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500" required>
+                    <option value="">Sélectionner une structure</option>
+                    <option v-for="structure in availableStructures" :key="structure.id" :value="structure.id">
+                      {{ structure.libelle }}
+                    </option>
+                  </select>
+                  <div v-if="form.errors.structure_id" class="text-red-600 text-sm mt-1">{{ form.errors.structure_id }}</div>
+                </div>
               </div>
 
               <!-- Boutons de navigation -->
@@ -219,11 +231,12 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, watch } from 'vue';
 import { Head, useForm, router, usePage } from '@inertiajs/vue3';
 import Admin from '@/Layouts/Admin.vue';
 //import SimpleLayout from '@/Layouts/SimpleLayout.vue';
 import AdminToast from '@/Components/AdminToast.vue';
+import axios from 'axios';
 
 const props = defineProps({
   structures: Array,
@@ -233,6 +246,7 @@ const page = usePage();
 const toast = ref(null);
 const showModal = ref(false);
 const editingId = ref(null);
+const availableStructures = ref([]); // Variable pour stocker les structures disponibles
 
 // Ajout des variables pour la confirmation de suppression
 const showDeleteModal = ref(false);
@@ -242,13 +256,34 @@ const form = useForm({
   sigle: '',
   libelle: '',
   description: '',
+  role_agent: '',
+  structure_id: null,
+});
+
+// Fonction pour charger les structures disponibles
+async function loadAvailableStructures() {
+  try {
+    const response = await axios.get('/admin/structures/available');
+    availableStructures.value = response.data; // Stockez les données dans la variable
+  } catch (error) {
+    console.error('Erreur lors du chargement des structures disponibles :', error);
+  }
+}
+
+// Surveillez les changements dans le rôle
+watch(() => form.role_agent, (newRole) => {
+  if (newRole === 'RS') {
+    loadAvailableStructures(); // Chargez les structures disponibles
+  } else {
+    form.structure_id = null; // Réinitialisez la structure sélectionnée
+  }
 });
 
 // Surveiller les messages flash et les afficher automatiquement
 onMounted(() => {
   // Vérifier si des messages flash existent au chargement
   setTimeout(() => {
-    const { flash } = page.props;
+    const flash = usePage().props.flash || {};
     if (flash) {
       if (flash.success && toast.value) {
         toast.value.addToast({

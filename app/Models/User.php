@@ -30,6 +30,7 @@ class User extends Authenticatable implements MustVerifyEmail
         'telephone',
         'date_d_inscription',
         'role',
+        'avatar',
     ];
 
     /**
@@ -53,6 +54,7 @@ class User extends Authenticatable implements MustVerifyEmail
         'date_de_naissance' => 'date',
         'date_d_inscription' => 'date',
         'role' => 'string',
+        'telephone' => 'integer',
     ];
 
     /**
@@ -88,6 +90,19 @@ public function membreGroupes()
 public function agent()
 {
     return $this->hasOne(Agent::class);
+}
+
+/**
+ * Get the avatar URL.
+ *
+ * @return string|null
+ */
+public function getAvatarUrlAttribute()
+{
+    if (!$this->avatar) {
+        return null;
+    }
+    return asset('storage/' . $this->avatar);
 }
 
 }

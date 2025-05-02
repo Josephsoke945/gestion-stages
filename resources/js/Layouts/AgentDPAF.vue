@@ -20,9 +20,9 @@
                             <NavLink :href="route('agent.demandes')" :active="route().current('agent.demandes')">
                                 Demandes de stage
                             </NavLink>
-                            <NavLink :href="route('agent.structures')" :active="route().current('agent.structures')">
+                            <!-- <NavLink :href="route('agent.structures')" :active="route().current('agent.structures')">
                                 Structures
-                            </NavLink>
+                            </NavLink> -->
                         </div>
                     </div>
 
@@ -32,10 +32,16 @@
                             <Dropdown align="right" width="48">
                                 <template #trigger>
                                     <button class="flex items-center text-sm font-medium text-gray-500 hover:text-gray-700 focus:outline-none transition duration-150 ease-in-out">
+                                        <img
+                                            v-if="$page.props.auth.user && $page.props.auth.user.avatar"
+                                            :src="'/storage/' + $page.props.auth.user.avatar"
+                                            alt="Photo de profil"
+                                            class="w-9 h-9 rounded-full object-cover mr-2 border border-gray-300"
+                                        />
                                         <div>{{ $page.props.auth.user.nom }}</div>
-                                        <span class="ml-2 px-2 py-1 text-xs font-semibold text-blue-800 bg-blue-100 rounded-full">
+                                        <!-- <span class="ml-2 px-2 py-1 text-xs font-semibold text-blue-800 bg-blue-100 rounded-full">
                                             Agent DPAF
-                                        </span>
+                                        </span> -->
                                         <div class="ml-1">
                                             <svg class="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
                                                 <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" />
@@ -73,4 +79,5 @@ import { Link } from '@inertiajs/vue3';
 import NavLink from '@/Components/NavLink.vue';
 import Dropdown from '@/Components/Dropdown.vue';
 import DropdownLink from '@/Components/DropdownLink.vue';
+
 </script> 

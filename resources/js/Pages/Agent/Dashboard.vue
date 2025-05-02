@@ -13,21 +13,93 @@
                     <pre>{{ debug }}</pre>
                 </div> -->
 
-                <!-- Statistiques -->
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-                    <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg p-6">
-                        <div class="text-gray-900 text-lg font-semibold mb-2">Demandes en attente</div>
-                        <div class="text-3xl font-bold text-blue-600">{{ stats.demandesEnAttente }}</div>
+                <!-- Stats Cards -->
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <!-- Demandes en attente -->
+                    <div class="bg-white overflow-hidden rounded-lg shadow-lg transition-all duration-300 hover:shadow-xl border border-gray-100">
+                        <div class="px-6 py-5">
+                            <div class="flex items-center justify-between">
+                                <div class="flex-1">
+                                    <div class="flex items-center">
+                                        <div class="p-3 bg-yellow-100 rounded-lg">
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-yellow-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                            </svg>
+                                        </div>
+                                        <div class="ml-4">
+                                            <h3 class="text-lg font-semibold text-gray-900">Demandes en attente</h3>
+                                            <div class="flex items-baseline">
+                                                <p class="text-3xl font-bold text-gray-900">{{ stats.demandesEnAttente }}</p>
+                                                <p class="ml-2 text-sm text-gray-600">demandes</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="bg-yellow-50 px-6 py-3">
+                            <div class="text-sm text-yellow-600">
+                                Nécessitent une affectation
+                            </div>
+                        </div>
                     </div>
 
-                    <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg p-6">
-                        <div class="text-gray-900 text-lg font-semibold mb-2">Demandes traitées</div>
-                        <div class="text-3xl font-bold text-green-600">{{ stats.demandesTraitees }}</div>
+                    <!-- Demandes traitées -->
+                    <div class="bg-white overflow-hidden rounded-lg shadow-lg transition-all duration-300 hover:shadow-xl border border-gray-100">
+                        <div class="px-6 py-5">
+                            <div class="flex items-center justify-between">
+                                <div class="flex-1">
+                                    <div class="flex items-center">
+                                        <div class="p-3 bg-green-100 rounded-lg">
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                            </svg>
+                                        </div>
+                                        <div class="ml-4">
+                                            <h3 class="text-lg font-semibold text-gray-900">Demandes traitées</h3>
+                                            <div class="flex items-baseline">
+                                                <p class="text-3xl font-bold text-gray-900">{{ stats.demandesTraitees }}</p>
+                                                <p class="ml-2 text-sm text-gray-600">demandes</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="bg-green-50 px-6 py-3">
+                            <div class="text-sm text-green-600">
+                                Traitées avec succès
+                            </div>
+                        </div>
                     </div>
 
-                    <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg p-6">
-                        <div class="text-gray-900 text-lg font-semibold mb-2">Structures actives</div>
-                        <div class="text-3xl font-bold text-purple-600">{{ stats.structuresActives }}</div>
+                    <!-- Demandes affectées -->
+                    <div class="bg-white overflow-hidden rounded-lg shadow-lg transition-all duration-300 hover:shadow-xl border border-gray-100">
+                        <div class="px-6 py-5">
+                            <div class="flex items-center justify-between">
+                                <div class="flex-1">
+                                    <div class="flex items-center">
+                                        <div class="p-3 bg-blue-100 rounded-lg">
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                                            </svg>
+                                        </div>
+                                        <div class="ml-4">
+                                            <h3 class="text-lg font-semibold text-gray-900">Demandes affectées</h3>
+                                            <div class="flex items-baseline">
+                                                <p class="text-3xl font-bold text-gray-900">{{ stats.demandesAffectees }}</p>
+                                                <p class="ml-2 text-sm text-gray-600">demandes</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="bg-blue-50 px-6 py-3">
+                            <div class="text-sm text-blue-600">
+                                En cours de traitement
+                            </div>
+                        </div>
                     </div>
                 </div>
 
@@ -76,33 +148,7 @@
                     </div>
                 </div>
 
-                <!-- Structures gérées -->
-                <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
-                    <div class="p-6 bg-white border-b border-gray-200">
-                        <div class="flex justify-between items-center mb-4">
-                            <h3 class="text-lg font-semibold text-gray-900">Structures gérées</h3>
-                            <Link :href="route('agent.structures')" class="text-blue-600 hover:text-blue-800">
-                                Voir tout
-                            </Link>
-                        </div>
-                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                            <div v-for="structure in structures" :key="structure.id" 
-                                class="border rounded-lg p-4 hover:shadow-md transition-shadow">
-                                <h4 class="font-semibold text-lg mb-2">{{ structure.libelle }}</h4>
-                                <p class="text-gray-600 text-sm mb-2">{{ structure.description }}</p>
-                                <div class="flex justify-between items-center">
-                                    <span class="text-sm text-gray-500">
-                                        {{ structure.stagiaires_count }} stagiaires
-                                    </span>
-                                    <Link :href="route('agent.structures.show', structure.id)" 
-                                        class="text-blue-600 hover:text-blue-800 text-sm">
-                                        Détails
-                                    </Link>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+                
             </div>
         </div>
     </AgentDPAF>
@@ -143,7 +189,7 @@ const formatDate = (date) => {
 const getStatusClass = (status) => {
     const classes = {
         'En attente': 'bg-yellow-100 text-yellow-800',
-        'Approuvée': 'bg-green-100 text-green-800',
+        'Acceptée': 'bg-green-100 text-green-800',
         'Refusée': 'bg-red-100 text-red-800',
         'En cours': 'bg-blue-100 text-blue-800'
     };

@@ -15,7 +15,7 @@ Nous vous confirmons la bonne réception de votre demande de stage.
 ## Détails de votre demande
 - **Type de demande :** {{ $demande->type }}
 - **Nature :** {{ $demande->nature }}
-- **Structure demandée :** {{ $demande->structure->libelle }}
+- **Structure demandée :** {{ $demande->structure ? $demande->structure->libelle : 'Non spécifiée' }}
 - **Période :** du {{ \Carbon\Carbon::parse($demande->date_debut)->format('d/m/Y') }} au {{ \Carbon\Carbon::parse($demande->date_fin)->format('d/m/Y') }}
 
 Vous pouvez suivre l'état de votre demande en vous connectant à votre espace personnel et en consultant la page de suivi des demandes.

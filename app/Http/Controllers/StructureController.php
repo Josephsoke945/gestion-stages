@@ -1,59 +1,100 @@
 <?php
+
 namespace App\Http\Controllers;
 
 use App\Models\Structure;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
-use Illuminate\Support\Facades\Auth;
 
 class StructureController extends Controller
 {
+    /**
+     * Affiche la liste des structures.
+     */
     public function index()
     {
-        if (Auth::user()->role !== 'admin') {
-            return redirect()->route('dashboard')->with('error', 'Accès non autorisé.');
-        }
-        $structures = Structure::select('id', 'sigle', 'libelle', 'description')->get();
+        $structures = Structure::with('responsable')->get();
 
         return Inertia::render('Structures/Index', [
             'structures' => $structures,
         ]);
     }
 
+    /**
+     * Affiche le formulaire de création d'une structure.
+     */
+    public function create()
+    {
+        return Inertia::render('Admin/Structures/Create');
+    }
+
+    /**
+     * Enregistre une nouvelle structure.
+     */
     public function store(Request $request)
     {
-        // Validation des données avec contrôle des doublons sur sigle et libellé
         $validated = $request->validate([
-            'sigle' => 'required|string|max:255|unique:structures,sigle',
-            'libelle' => 'required|string|max:255|unique:structures,libelle',
+            'sigle' => 'required|string|max:255|unique:structures',
+            'libelle' => 'required|string|max:255|unique:structures',
             'description' => 'nullable|string',
         ]);
 
-        // Créer la nouvelle structure
         Structure::create($validated);
 
-        return redirect()->route('admin.structures.index')->with('success', 'Structure ajoutée avec succès.');
+        return redirect()->route('admin.structures.index')->with('success', 'Structure créée avec succès.');
     }
 
+    /**
+     * Affiche le formulaire d'édition pour une structure.
+     */
+    public function edit(Structure $structure)
+    {
+        return Inertia::render('Admin/Structures/Edit', [
+            'structure' => $structure,
+        ]);
+    }
+
+    /**
+     * Met à jour une structure existante.
+     */
     public function update(Request $request, Structure $structure)
     {
-        // Validation des données avec contrôle des doublons, excepté pour la structure en cours de modification
         $validated = $request->validate([
             'sigle' => 'required|string|max:255|unique:structures,sigle,' . $structure->id,
             'libelle' => 'required|string|max:255|unique:structures,libelle,' . $structure->id,
             'description' => 'nullable|string',
         ]);
 
-        // Mise à jour de la structure
         $structure->update($validated);
 
         return redirect()->route('admin.structures.index')->with('success', 'Structure mise à jour avec succès.');
     }
 
+    /**
+     * Supprime une structure.
+     */
     public function destroy(Structure $structure)
     {
         $structure->delete();
 
         return redirect()->route('admin.structures.index')->with('success', 'Structure supprimée avec succès.');
+    }
+
+    /**
+     * Retourne les structures sans responsable (utilisé pour sélection dynamique).
+     */
+    public function available()
+    {
+        $structures = Structure::where(function($query) {
+            $query->whereNull('responsable_id');
+            
+            // Si un agent_id est fourni, inclure aussi sa structure actuelle
+            if (request()->has('agent_id')) {
+                $query->orWhere('responsable_id', request()->agent_id);
+            }
+        })
+        ->get(['id', 'libelle', 'responsable_id']);
+
+        return response()->json($structures);
     }
 }
