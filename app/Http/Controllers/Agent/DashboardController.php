@@ -50,7 +50,7 @@ class DashboardController extends Controller
             // Récupérer les statistiques de manière sécurisée
             try {
                 $stats['demandesEnAttente'] = DemandeStage::where('statut', 'En attente')->count();
-                $stats['demandesTraitees'] = DemandeStage::whereIn('statut', ['Approuvée', 'Refusée'])->count();
+                $stats['demandesTraitees'] = DemandeStage::whereIn('statut', ['Acceptée', 'Refusée'])->count();
                 $stats['demandesAffectees'] = DemandeStage::where('statut', 'En cours')->count();
                 $stats['structuresActives'] = Structure::where('active', true)->count();
             } catch (\Exception $e) {

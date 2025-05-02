@@ -28,27 +28,27 @@ defineProps({
         </template>
 
         <div class="py-12">
-            <div class="mx-auto max-w-7xl space-y-6 sm:px-6 lg:px-8">
+            <div class="mx-auto max-w-3xl space-y-6 sm:px-6 lg:px-8">
                 <div
-                    class="bg-white p-4 shadow sm:rounded-lg sm:p-8"
+                    class="bg-white p-6 shadow-lg sm:rounded-lg transition-all duration-300 hover:shadow-xl"
                 >
                     <UpdateProfileInformationForm
                         :must-verify-email="mustVerifyEmail"
                         :status="status"
-                        class="max-w-xl"
+                        class="w-full"
                     />
                 </div>
 
                 <div
-                    class="bg-white p-4 shadow sm:rounded-lg sm:p-8"
+                    class="bg-white p-6 shadow-lg sm:rounded-lg transition-all duration-300 hover:shadow-xl"
                 >
-                    <UpdatePasswordForm class="max-w-xl" />
+                    <UpdatePasswordForm class="w-full" />
                 </div>
 
                 <div
-                    class="bg-white p-4 shadow sm:rounded-lg sm:p-8"
+                    class="bg-white p-6 shadow-lg sm:rounded-lg transition-all duration-300 hover:shadow-xl"
                 >
-                    <DeleteUserForm class="max-w-xl" />
+                    <DeleteUserForm class="w-full" />
                 </div>
             </div>
         </div>

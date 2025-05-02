@@ -34,9 +34,9 @@
         </div>
 
         <!-- Statistiques -->
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
           <!-- Demandes en attente -->
-          <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
+          <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg hover:shadow-md transition-shadow duration-300">
             <div class="p-6">
               <div class="flex items-center">
                 <div class="p-3 rounded-full bg-yellow-100 text-yellow-600">
@@ -44,33 +44,19 @@
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
                 </div>
-                <div class="ml-4">
-                  <p class="text-sm text-gray-600">Demandes en attente</p>
-                  <p class="text-2xl font-semibold text-gray-800">{{ stats.demandesEnAttente }}</p>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- Demandes en cours -->
-          <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
-            <div class="p-6">
-              <div class="flex items-center">
-                <div class="p-3 rounded-full bg-blue-100 text-blue-600">
-                  <svg class="h-8 w-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-                  </svg>
-                </div>
-                <div class="ml-4">
-                  <p class="text-sm text-gray-600">Demandes en cours</p>
-                  <p class="text-2xl font-semibold text-gray-800">{{ stats.demandesEnCours }}</p>
+                <div class="ml-4 flex-1">
+                  <p class="text-sm font-medium text-gray-600">Demandes en attente</p>
+                  <div class="flex items-baseline">
+                    <p class="text-2xl font-bold text-gray-800">{{ stats.demandesEnAttente }}</p>
+                    <p class="ml-2 text-sm text-gray-500">demande(s)</p>
+                  </div>
                 </div>
               </div>
             </div>
           </div>
 
           <!-- Demandes acceptées -->
-          <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
+          <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg hover:shadow-md transition-shadow duration-300">
             <div class="p-6">
               <div class="flex items-center">
                 <div class="p-3 rounded-full bg-green-100 text-green-600">
@@ -78,16 +64,19 @@
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
                   </svg>
                 </div>
-                <div class="ml-4">
-                  <p class="text-sm text-gray-600">Demandes acceptées</p>
-                  <p class="text-2xl font-semibold text-gray-800">{{ stats.demandesAcceptees }}</p>
+                <div class="ml-4 flex-1">
+                  <p class="text-sm font-medium text-gray-600">Demandes acceptées</p>
+                  <div class="flex items-baseline">
+                    <p class="text-2xl font-bold text-gray-800">{{ stats.demandesAcceptees }}</p>
+                    <p class="ml-2 text-sm text-gray-500">demande(s)</p>
+                  </div>
                 </div>
               </div>
             </div>
           </div>
 
           <!-- Demandes rejetées -->
-          <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
+          <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg hover:shadow-md transition-shadow duration-300">
             <div class="p-6">
               <div class="flex items-center">
                 <div class="p-3 rounded-full bg-red-100 text-red-600">
@@ -95,9 +84,12 @@
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
                   </svg>
                 </div>
-                <div class="ml-4">
-                  <p class="text-sm text-gray-600">Demandes rejetées</p>
-                  <p class="text-2xl font-semibold text-gray-800">{{ stats.demandesRejetees }}</p>
+                <div class="ml-4 flex-1">
+                  <p class="text-sm font-medium text-gray-600">Demandes rejetées</p>
+                  <div class="flex items-baseline">
+                    <p class="text-2xl font-bold text-gray-800">{{ stats.demandesRejetees }}</p>
+                    <p class="ml-2 text-sm text-gray-500">demande(s)</p>
+                  </div>
                 </div>
               </div>
             </div>
@@ -174,11 +166,10 @@ import { Head, Link } from '@inertiajs/vue3';
 import RSLayout from '@/Layouts/RSLayout.vue';
 //import Pagination from '@/Components/Pagination.vue';
 
-const props = defineProps({
+defineProps({
   stats: Object,
   structure: Object,
   dernieresDemandes: Array,
-  error: String,
 });
 
 function formatDate(date) {
