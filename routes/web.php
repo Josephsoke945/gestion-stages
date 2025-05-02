@@ -12,6 +12,9 @@ use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Response;
+use App\Http\Controllers\Admin\RapportController;
 
 Route::get('/', function () {
     return Inertia::render('Welcome', [
@@ -63,9 +66,66 @@ Route::get('/dashboard', function () {
                 'stagiaires' => \App\Models\Stagiaire::count(),
                 'agents' => \App\Models\Agent::count(),
             ];
-            
+
+            $recentStagiaires = DB::table('stagiaires')->orderBy('created_at', 'desc')->take(2)->get();
+            $recentStructures = DB::table('structures')->orderBy('created_at', 'desc')->take(1)->get();
+            $lastDemande = DB::table('demande_stages')->orderBy('created_at', 'desc')->first();
+
+            $recentActivities = [];
+
+            // Ajout de la dernière demande de stage
+            if ($lastDemande) {
+                $stagiaire = DB::table('users')
+                    ->join('stagiaires', 'users.id', '=', 'stagiaires.user_id')
+                    ->where('stagiaires.id_stagiaire', $lastDemande->stagiaire_id)
+                    ->select('users.nom', 'users.prenom')
+                    ->first();
+                $structure = null;
+                if ($lastDemande->structure_id) {
+                    $structureObj = DB::table('structures')->where('id', $lastDemande->structure_id)->first();
+                    $structure = $structureObj ? $structureObj->sigle : null;
+                }
+                $recentActivities[] = [
+                    'type' => 'demande',
+                    'title' => 'Dernière demande de stage',
+                    'user' => $stagiaire ? trim(($stagiaire->prenom ?? '') . ' ' . ($stagiaire->nom ?? '')) : null,
+                    'structure' => $structure,
+                    'created_at' => $lastDemande->created_at,
+                ];
+            }
+
+            foreach ($recentStagiaires as $stagiaire) {
+                // On va chercher le nom du user associé
+                $user = DB::table('users')->where('id', $stagiaire->user_id)->first();
+                $userName = $user ? trim(($user->prenom ?? '') . ' ' . ($user->nom ?? '')) : null;
+
+                $recentActivities[] = [
+                    'type' => 'stagiaire',
+                    'title' => 'Nouveau stagiaire inscrit',
+                    'user' => $userName,
+                    'created_at' => $stagiaire->created_at,
+                ];
+            }
+            foreach ($recentStructures as $structure) {
+                $recentActivities[] = [
+                    'type' => 'structure',
+                    'title' => 'Nouvelle structure ajoutée',
+                    'structure' => $structure->libelle,
+                    'created_at' => $structure->created_at,
+                ];
+            }
+            $recentActivities[] = [
+                'type' => 'rapport',
+                'title' => 'Rapport mensuel généré',
+                'created_at' => now()->subDays(2),
+            ];
+
+            // Trie par date décroissante
+            usort($recentActivities, fn($a, $b) => strtotime($b['created_at']) <=> strtotime($a['created_at']));
+
             return Inertia::render('Dashboard/Admin', [
-                'stats' => $stats
+                'stats' => $stats,
+                'recentActivities' => $recentActivities,
             ]);
         })->name('dashboard');
 
@@ -138,6 +198,9 @@ Route::get('/dashboard', function () {
         Route::get('/demandes', [App\Http\Controllers\Stagiaire\DemandeController::class, 'index'])->name('demandes');
         Route::get('/demandes/{demande}', [App\Http\Controllers\Stagiaire\DemandeController::class, 'show'])->name('demandes.show');
     });
+
+    // Route pour télécharger le rapport mensuel
+    Route::get('/admin/rapport-mensuel', [RapportController::class, 'telecharger'])->name('admin.rapport-mensuel');
 });
 
 require __DIR__.'/auth.php';

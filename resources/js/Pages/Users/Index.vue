@@ -69,31 +69,35 @@
                   </td>
                   <td class="px-6 py-4 border-b border-gray-200">
                     <div class="flex justify-center space-x-3">
-                      <!-- Modifier -->
-                      <button 
-                        @click="openModal(user)" 
-                        class="text-blue-600 hover:text-blue-800 font-medium flex items-center"
-                        title="Modifier"
-                      >
-                        <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" viewBox="0 0 24 24" fill="none"
-                          stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                          <path d="M17 3a2.85 2.85 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/>
-                        </svg>
-                      </button>
-
-                      <!-- Supprimer -->
-                      <button 
-                        @click="openDeleteModal(user)" 
-                        class="text-red-600 hover:text-red-800 font-medium flex items-center"
-                        title="Supprimer"
-                      >
-                        <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" viewBox="0 0 24 24" fill="none"
-                          stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                          <path d="M3 6h18"/>
-                          <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/>
-                          <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/>
-                        </svg>
-                      </button>
+                      <template v-if="user.role.toLowerCase() !== 'stagiaire'">
+                        <!-- Modifier -->
+                        <button 
+                          @click="openModal(user)" 
+                          class="text-blue-600 hover:text-blue-800 font-medium flex items-center"
+                          title="Modifier"
+                        >
+                          <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" viewBox="0 0 24 24" fill="none"
+                            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M17 3a2.85 2.85 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/>
+                          </svg>
+                        </button>
+                        <!-- Supprimer -->
+                        <button 
+                          @click="openDeleteModal(user)" 
+                          class="text-red-600 hover:text-red-800 font-medium flex items-center"
+                          title="Supprimer"
+                        >
+                          <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" viewBox="0 0 24 24" fill="none"
+                            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M3 6h18"/>
+                            <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/>
+                            <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/>
+                          </svg>
+                        </button>
+                      </template>
+                      <template v-else>
+                        <span class="text-gray-400 italic">Aucune action</span>
+                      </template>
                     </div>
                   </td>
                 </tr>
